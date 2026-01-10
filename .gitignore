@@ -1,0 +1,8 @@
+/.vs
+/bin-int
+/bin
+/Glfw34
+/Glm1.0.1
+/Vulkan
+/StbImage
+/VulkanEngineTest/x64
