@@ -18,12 +18,18 @@
     <ClCompile Include="VulkanEngineTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="VulkanBase\VulkanBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VKBase.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="EasyVulkan.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanBase\VulkanBase.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
