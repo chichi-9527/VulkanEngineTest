@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "VkShader.h"
+
 #include <vulkan/vulkan.h>
 
 #include <vector>
@@ -53,6 +55,11 @@ public:
 	void AddInstanceExtension(const char* extensionName);
 	void AddDeviceExtension(const char* extensionName);
 
+	/// <summary>
+	/// 创建渲染管线
+	/// </summary>
+	void CreateGraphicsPipeline();
+
 protected:
 	virtual bool CreateSurface();
 
@@ -72,9 +79,13 @@ private:
 	bool _pick_physical_device();
 	bool _create_logical_device();
 	bool _create_swap_chain();
+	bool _create_image_views();
 	VkSurfaceFormatKHR _choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
 	/// <summary>
-	/// 
+	/// VK_PRESENT_MODE_IMMEDIATE_KHR：通过应用程序提交的图像会立即传输到屏幕上;
+	/// VK_PRESENT_MODE_FIFO_KHR : 交换链是一个队列，显示器刷新时，会从队列前端取出图像，程序则将渲染好的图像插入队列后端。如果队列已满，程序就必须等待。
+	/// VK_PRESENT_MODE_FIFO_RELAXED_KHR: 此模式与前一种模式的区别仅在于应用程序延迟且在上一个垂直空白时队列为空。此时，图像不会等待下一个垂直空白，而是在最终到达时立即传输。这可能会导致画面出现可见的撕裂。
+	/// VK_PRESENT_MODE_MAILBOX_KHR : 当队列满时，应用程序不会阻塞，而是直接用新生成的图像替换已排队的图像。
 	/// </summary>
 	/// <param name="available_present_modes"></param>
 	/// <param name="mode">优先选择，如果不支持总是选择 VK_PRESENT_MODE_FIFO_KHR </param>
@@ -90,6 +101,7 @@ public:
 private:
 	SwapChainSupportDetails _swap_chain_support;
 	std::vector<VkImage> _swap_chain_images;
+	std::vector<VkImageView> _swap_chain_image_views;
 
 	VkInstance _instance;
 	VkDevice _device;
@@ -99,6 +111,8 @@ private:
 	VkQueue _present_queue;
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swap_chain;
+	VkFormat _swap_chain_image_format;
+	VkExtent2D _swap_chain_extent;
 
 	QueueFamilyIndices _queue_family_indices;
 

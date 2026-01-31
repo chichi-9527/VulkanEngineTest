@@ -5,6 +5,8 @@
 #include <format>
 #include <sstream>
 
+#include <filesystem>
+#include <cstdlib>
 
 //#include "VKBase.h"
 //#include "EasyVulkan.h"
@@ -167,8 +169,43 @@ void TitleFps()
 //    Create();
 //}
 
+#ifdef _WIN32
+void executeAndPrint(const char* command)
+{
+    FILE* pipe = _popen(command, "r");
+    if (!pipe)
+    {
+        std::cerr << "popen failed!" << std::endl;
+        return;
+    }
+
+    char buffer[128];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+    {
+        std::cout << "lv se: " << buffer;
+    }
+
+    _pclose(pipe);
+}
+#endif // _WIN32
+
 int main()
 {
+    std::string path;
+    try
+    {
+        path = std::filesystem::current_path().string();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << "\n";
+        return -1;
+    }
+    std::cout << path << "\n";
+#ifdef _WIN32
+    executeAndPrint((path + "\\shader\\vulkan\\compile.bat").c_str());
+#endif // _WIN32
+
     if (!InitializeWindow({ 1280, 720 }))
         return -1; 
 

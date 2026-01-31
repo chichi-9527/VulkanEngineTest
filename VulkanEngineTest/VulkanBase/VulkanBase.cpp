@@ -13,6 +13,7 @@
 #include <set>
 #include <limits>
 #include <algorithm>
+#include <fstream>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -103,6 +104,7 @@ bool VulkanBase::InitVulkan()
 	_pick_physical_device();
 	_create_logical_device();
 	_create_swap_chain();
+	_create_image_views();
 	return true;
 }
 
@@ -112,6 +114,10 @@ void VulkanBase::CleanUp() const
 	DestroyDebugUtilsMessengerEXT(_instance, _debug_messenger, nullptr);
 #endif
 
+	for (auto imageView : _swap_chain_image_views)
+	{
+		vkDestroyImageView(_device, imageView, nullptr);
+	}
 	vkDestroySwapchainKHR(_device, _swap_chain, nullptr);
 	vkDestroyDevice(_device, nullptr);
 	vkDestroySurfaceKHR(_instance, _surface, nullptr);
@@ -435,6 +441,7 @@ bool VulkanBase::_create_swap_chain()
 		imageCount = _swap_chain_support.Capabilities.maxImageCount;
 	}
 
+	// VkSwapchainCreateInfoKHR
 	VkSwapchainCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	createInfo.surface = _surface;
@@ -494,7 +501,38 @@ bool VulkanBase::_create_swap_chain()
 		std::cout << std::format("ERROR : [ VulkanBase ] Failed to get swapchain images! Error code: {}\n", int32_t(result));
 		return false;
 	}
+	_swap_chain_image_format = surfaceFormat.format;
+	_swap_chain_extent = extent;
 
+	return true;
+}
+
+bool VulkanBase::_create_image_views()
+{
+	_swap_chain_image_views.resize(_swap_chain_images.size());
+	for (size_t i = 0; i < _swap_chain_images.size(); ++i)
+	{
+		VkImageViewCreateInfo imageViewCreateInfo{};
+		imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		imageViewCreateInfo.image = _swap_chain_images[i];
+		imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;// 1D 纹理、2D 纹理、3D 纹理和立方体贴图。
+		imageViewCreateInfo.format = _swap_chain_image_format;
+		imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+		imageViewCreateInfo.subresourceRange.levelCount = 1;
+		imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+		imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+		if (VkResult result = vkCreateImageView(_device, &imageViewCreateInfo, nullptr, &_swap_chain_image_views[i]))
+		{
+			std::cout << std::format("ERROR : [ VulkanBase ] Failed to Create ImageView! Error code: {}\n", int32_t(result));
+			return false;
+		}
+	}
 	return true;
 }
 
