@@ -1,3 +1,10 @@
+﻿// 模拟预处理头
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#define NOMINMAX
+#endif
+#include <vulkan/vulkan.h>
+
 #include "VkShader.h"
 
 #include <fstream>
@@ -50,3 +57,9 @@ std::vector<char> VkEngineShaderModule::ReadFile(const std::string& path)
 	file.close();
 	return buf;
 }
+
+VkEngineShaderStages::VkEngineShaderStages(const VkEngineShaderModule& vert_shader_module, const VkEngineShaderModule& frag_shader_module)
+{}
+
+VkEngineShaderStages::~VkEngineShaderStages()
+{}

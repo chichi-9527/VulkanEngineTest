@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#ifndef UseDebugMessenger
-#define UseDebugMessenger
-#endif
+//#ifndef UseDebugMessenger
+//#define UseDebugMessenger
+//#endif
 
 class VulkanBase
 {
@@ -40,6 +40,7 @@ public:
 	VkDevice GetVkDevice() const { return _device; }
 	VkSurfaceKHR GetSurface() const { return _surface; }
 	void SetSurface(VkSurfaceKHR surface) { if (!_surface) _surface = surface; }
+	uint32_t GetSwapChainImageCount() const { return _swap_chain_image_count; }
 
 	// create instance
 	bool InitVulkanInstance();
@@ -49,16 +50,23 @@ public:
 	/// <returns></returns>
 	bool InitVulkan();
 
+	// Render command
+	void WaitForFence(uint32_t& frameIndex);
+	void AcquireNextImage(uint32_t& frameIndex);
+	void ResetCommandBuffer();
+	void RecordCommandBuffer(uint32_t& frameIndex);
+	bool SubmitCommandBuffer(uint32_t& frameIndex);
+	void Present(uint32_t& frameIndex);
+	void WaitIdle();
+
+	//void DrawFrame();
+	//
+
 	void CleanUp() const;
 
 	void AddValidationLayer(const char* layerName);
 	void AddInstanceExtension(const char* extensionName);
 	void AddDeviceExtension(const char* extensionName);
-
-	/// <summary>
-	/// 创建渲染管线
-	/// </summary>
-	void CreateGraphicsPipeline();
 
 protected:
 	virtual bool CreateSurface();
@@ -80,6 +88,13 @@ private:
 	bool _create_logical_device();
 	bool _create_swap_chain();
 	bool _create_image_views();
+	bool _create_render_pass();
+	bool _create_graphics_pipeline();
+	bool _create_framebuffers();
+	bool _create_command_pool();
+	bool _create_command_buffer();
+	bool _record_command_buffer(uint32_t imageIndex);
+	bool _create_sync_objects();
 	VkSurfaceFormatKHR _choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
 	/// <summary>
 	/// VK_PRESENT_MODE_IMMEDIATE_KHR：通过应用程序提交的图像会立即传输到屏幕上;
@@ -102,6 +117,7 @@ private:
 	SwapChainSupportDetails _swap_chain_support;
 	std::vector<VkImage> _swap_chain_images;
 	std::vector<VkImageView> _swap_chain_image_views;
+	std::vector<VkFramebuffer> _swap_chain_framebuffers;
 
 	VkInstance _instance;
 	VkDevice _device;
@@ -113,10 +129,20 @@ private:
 	VkSwapchainKHR _swap_chain;
 	VkFormat _swap_chain_image_format;
 	VkExtent2D _swap_chain_extent;
+	VkPipelineLayout _pipeline_layout;
+	VkRenderPass _render_pass;
+	VkPipeline _graphics_pipeline;
+	VkCommandPool _command_pool;
+	VkCommandBuffer _command_buffer;
+	std::vector<VkSemaphore> _acquire_semaphores;
+	std::vector<VkSemaphore> _submit_semaphores;
+	std::vector<VkFence> _frame_fences;
 
 	QueueFamilyIndices _queue_family_indices;
 
 	uint32_t _api_version;
+
+	uint32_t _swap_chain_image_count = 0;
 
 	uint32_t _frame_buffer_width = 0;
 	uint32_t _frame_buffer_height = 0;

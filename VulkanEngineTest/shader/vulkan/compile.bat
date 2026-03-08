@@ -21,6 +21,7 @@ if exist "glslc.exe" (
     if no exist ".\SPV\FirstTriangle.frag.spv"(
         glslc.exe .\GLSL\FirstTriangle.frag -o .\SPV\FirstTriangle.frag.spv
     )
+
     echo shader FirstTriangle done...
     
     REM 检查执行结果

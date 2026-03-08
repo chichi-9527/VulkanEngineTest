@@ -143,12 +143,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="test.cpp" />
+    <ClCompile Include="VulkanBase\VkShader.cpp" />
     <ClCompile Include="VulkanBase\VulkanBase.cpp" />
     <ClCompile Include="VulkanEngineTest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EasyVulkan.h" />
-    <ClInclude Include="VKBase.h" />
+    <ClInclude Include="VulkanBase\VkShader.h" />
     <ClInclude Include="VulkanBase\VulkanBase.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

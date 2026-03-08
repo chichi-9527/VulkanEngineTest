@@ -1,8 +1,10 @@
 #version 460
 #pragma shader_stage(fragment)
 
-layout(location = 0) out vec4 o_Color;
+layout(location = 0) in vec3 fragColor;
+
+layout(location = 0) out vec4 outColor;
 
 void main() {
-    o_Color = vec4(0, 0.5, 1, 1);
+    outColor = vec4(fragColor, 1.0);
 }
