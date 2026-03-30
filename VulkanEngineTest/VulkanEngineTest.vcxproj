@@ -108,17 +108,17 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SLANG_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories);$(SolutionDir)ShaderSlang\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);vulkan-1.lib;glfw3.lib;slang-compiler.lib;compiler-core.lib;core.lib;miniz.lib;lz4.lib</AdditionalDependencies>
       <AdditionalOptions>/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
@@ -128,27 +128,29 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SLANG_STATIC;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories);$(SolutionDir)ShaderSlang\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);vulkan-1.lib;glfw3.lib;slang-compiler.lib;compiler-core.lib;core.lib;miniz.lib;lz4.lib</AdditionalDependencies>
       <AdditionalOptions>/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="VulkanBase\ShaderCompiler.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="VulkanBase\VkShader.cpp" />
     <ClCompile Include="VulkanBase\VulkanBase.cpp" />
     <ClCompile Include="VulkanEngineTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="VulkanBase\ShaderCompiler.h" />
     <ClInclude Include="VulkanBase\VkShader.h" />
     <ClInclude Include="VulkanBase\VulkanBase.h" />
   </ItemGroup>
