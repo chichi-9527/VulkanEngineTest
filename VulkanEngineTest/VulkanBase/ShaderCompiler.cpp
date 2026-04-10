@@ -84,7 +84,7 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
         }
         if (!out_glsl_path.empty())
         {
-            hasFile1 = std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".glsl");
+            hasFile2 = std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".glsl");
         }
         if (hasFile1 && hasFile2)
         {
@@ -93,14 +93,15 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
         }
 
         auto shaderSource = ReadFile(path);
+        //std::cout << shaderSource.size() << "\n";
 
         // 3. Load module
         Slang::ComPtr<slang::IModule> slangModule;
         {
             Slang::ComPtr<slang::IBlob> diagnosticsBlob;
             slangModule = session->loadModuleFromSourceString(
-                "test",                  // Module name
-                "test.slang",            // Module path
+                shaderName.c_str(),            // Module name
+                shaderName.c_str(),            // Module path
                 shaderSource.data(),              // Shader source code
                 diagnosticsBlob.writeRef()); // Optional diagnostic container
             diagnoseIfNeeded(diagnosticsBlob);
@@ -109,84 +110,185 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
                 continue;
             }
         }
-        // 4. Query Entry Points
-        Slang::ComPtr<slang::IEntryPoint> entryPoint;
+
+        // 获取模块中定义的所有入口点
+        SlangInt32 entryPointCount = slangModule->getDefinedEntryPointCount();
+        if (entryPointCount == 0)
         {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            slangModule->findEntryPointByName("computeMain", entryPoint.writeRef());
-            if (!entryPoint)
+            std::cout << std::format("WARNING : [ ShaderCompiler ] No entry points found in : {}", shaderName) << std::endl;
+            continue;
+        }
+
+        for (SlangInt32 i = 0; i < entryPointCount; ++i)
+        {
+            // 4. Query Entry Points
+            Slang::ComPtr<slang::IEntryPoint> entryPoint;
+
+            slangModule->getDefinedEntryPoint(i, entryPoint.writeRef());
+            if (!entryPoint) continue;
+
+            const char* epName = entryPoint->getFunctionReflection()->getName();
+
+            Slang::ComPtr<slang::IBlob> layoutDiag;
+            slang::ProgramLayout* layout = entryPoint->getLayout(0, layoutDiag.writeRef());
+            if (!layout)
             {
-                std::cout << "ERROR : [ ShaderCompiler ] Error getting entry point" << std::endl;
+                diagnoseIfNeeded(layoutDiag);
+                std::cout << std::format("ERROR : [ ShaderCompiler ] Failed to get layout for entry point : {}", epName) << std::endl;
                 continue;
             }
+
+            auto stage = layout->getEntryPointByIndex(0)->getStage();
+
+            std::string stageSuffix;
+            switch (stage)
+            {
+            case SLANG_STAGE_NONE:
+                break;
+            case SLANG_STAGE_VERTEX:
+                stageSuffix = "vert";
+                break;
+            case SLANG_STAGE_HULL:
+                break;
+            case SLANG_STAGE_DOMAIN:
+                break;
+            case SLANG_STAGE_GEOMETRY:
+                break;
+            case SLANG_STAGE_FRAGMENT:
+                stageSuffix = "frag";
+                break;
+            case SLANG_STAGE_COMPUTE:
+                stageSuffix = "comp";
+                break;
+            case SLANG_STAGE_RAY_GENERATION:
+                break;
+            case SLANG_STAGE_INTERSECTION:
+                break;
+            case SLANG_STAGE_ANY_HIT:
+                break;
+            case SLANG_STAGE_CLOSEST_HIT:
+                break;
+            case SLANG_STAGE_MISS:
+                break;
+            case SLANG_STAGE_CALLABLE:
+                break;
+            case SLANG_STAGE_MESH:
+                break;
+            case SLANG_STAGE_AMPLIFICATION:
+                break;
+            case SLANG_STAGE_DISPATCH:
+                break;
+            case SLANG_STAGE_COUNT:
+                break;
+            /*case SLANG_STAGE_PIXEL:
+                break;*/
+            default:
+                break;
+            }
+            if (stageSuffix.empty())
+            {
+                stageSuffix = "notDef";
+            }
+
+            // 5. Compose Modules + Entry Points
+            std::array<slang::IComponentType*, 2> componentTypes =
+            {
+                slangModule,
+                entryPoint
+            };
+            Slang::ComPtr<slang::IComponentType> composedProgram;
+            {
+                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+                SlangResult result = session->createCompositeComponentType(
+                    componentTypes.data(),
+                    componentTypes.size(),
+                    composedProgram.writeRef(),
+                    diagnosticsBlob.writeRef());
+
+                if (result)
+                {
+                    diagnoseIfNeeded(diagnosticsBlob);
+                    continue;
+                }
+            }
+
+            // 6. Link
+            Slang::ComPtr<slang::IComponentType> linkedProgram;
+            {
+                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+                SlangResult result = composedProgram->link(
+                    linkedProgram.writeRef(),
+                    diagnosticsBlob.writeRef());
+
+                if (result)
+                {
+                    diagnoseIfNeeded(diagnosticsBlob);
+                    continue;
+                }
+            }
+
+            // 生成代码
+            // // 7. Get Target Kernel Code
+            // targetIndex 0 = SPIR-V, targetIndex 1 = GLSL（需要与 SessionDesc 中的顺序一致）
+            if (!out_spv_path.empty())
+            {
+                Slang::ComPtr<slang::IBlob> spirvCode;
+                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+                SlangResult result = linkedProgram->getEntryPointCode(
+                    0,
+                    0,
+                    spirvCode.writeRef(),
+                    diagnosticsBlob.writeRef());
+                if (result)
+                {
+                    diagnoseIfNeeded(diagnosticsBlob);
+                }
+                else
+                {
+                    std::cout << "INFO : [ ShaderCompiler ] Compiled SPIR-V done. name: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    auto res = WriteFile((const char*)spirvCode->getBufferPointer(), spirvCode->getBufferSize(), out_spv_path, shaderName + "." + stageSuffix + ".spv");
+                    if (res)
+                    {
+                        std::cout << "INFO : [ ShaderCompiler ] spv write done. file: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "ERROR : [ ShaderCompiler ] spv file write error; " << shaderName << "stage: " << stageSuffix << std::endl;
+                    }
+                }
+            }
+
+            if (!out_glsl_path.empty())
+            {
+                Slang::ComPtr<slang::IBlob> glslCode;
+                Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+                SlangResult result = linkedProgram->getEntryPointCode(
+                    0,
+                    1,
+                    glslCode.writeRef(),
+                    diagnosticsBlob.writeRef());
+                if (result)
+                {
+                    diagnoseIfNeeded(diagnosticsBlob);
+                }
+                else
+                {
+                    std::cout << "INFO : [ ShaderCompiler ] Compiled GLSL done. name: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    auto res = WriteFile((const char*)glslCode->getBufferPointer(), glslCode->getBufferSize(), out_glsl_path, shaderName + "." + stageSuffix + ".glsl");
+                    if (res)
+                    {
+                        std::cout << "INFO : [ ShaderCompiler ] glsl write done. file: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "ERROR : [ ShaderCompiler ] glsl file write error; " << shaderName << "stage: " << stageSuffix << std::endl;
+                    }
+                }
+            }
+
+
         }
 
-        // 5. Compose Modules + Entry Points
-        std::array<slang::IComponentType*, 2> componentTypes =
-        {
-            slangModule,
-            entryPoint
-        };
-
-        Slang::ComPtr<slang::IComponentType> composedProgram;
-        {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            SlangResult result = session->createCompositeComponentType(
-                componentTypes.data(),
-                componentTypes.size(),
-                composedProgram.writeRef(),
-                diagnosticsBlob.writeRef());
-            diagnoseIfNeeded(diagnosticsBlob);
-            SLANG_RETURN_ON_FAIL(result);
-        }
-
-        // 6. Link
-        Slang::ComPtr<slang::IComponentType> linkedProgram;
-        {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            SlangResult result = composedProgram->link(
-                linkedProgram.writeRef(),
-                diagnosticsBlob.writeRef());
-            diagnoseIfNeeded(diagnosticsBlob);
-            SLANG_RETURN_ON_FAIL(result);
-        }
-
-        // 7. Get Target Kernel Code
-        Slang::ComPtr<slang::IBlob> spirvCode;
-        {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            SlangResult result = linkedProgram->getEntryPointCode(
-                0,
-                0,
-                spirvCode.writeRef(),
-                diagnosticsBlob.writeRef());
-            diagnoseIfNeeded(diagnosticsBlob);
-            SLANG_RETURN_ON_FAIL(result);
-        }
-
-        Slang::ComPtr<slang::IBlob> glslCode;
-        {
-            Slang::ComPtr<slang::IBlob> diagnosticsBlob;
-            SlangResult result = linkedProgram->getEntryPointCode(
-                0,
-                1,
-                glslCode.writeRef(),
-                diagnosticsBlob.writeRef());
-            diagnoseIfNeeded(diagnosticsBlob);
-            SLANG_RETURN_ON_FAIL(result);
-        }
-
-
-        std::cout << "INFO : [ ShaderCompiler ] Compiled SPIR-V done." << std::endl;
-
-        if (glslCode)
-        {
-            std::cout << "INFO : [ ShaderCompiler ] Compiled GLSL done." << std::endl;
-        }
-        if (!out_spv_path.empty())
-            WriteFile((const char*)spirvCode->getBufferPointer(), spirvCode->getBufferSize(), out_spv_path, shaderName + ".spv");
-        if (!out_glsl_path.empty())
-            WriteFile((const char*)glslCode->getBufferPointer(), glslCode->getBufferSize(), out_glsl_path, shaderName + ".glsl");
     }
 	return true;
 }
@@ -200,10 +302,11 @@ std::vector<char> ShaderCompiler::ReadFile(const std::string& path)
     }
 
     size_t fileSize = (size_t)file.tellg();
-    std::vector<char> buf(fileSize);
+    std::vector<char> buf(fileSize + 1);
     file.seekg(0);
     file.read(buf.data(), fileSize);
     file.close();
+    buf[fileSize] = '\0';
     return buf;
 }
 

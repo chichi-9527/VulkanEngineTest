@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ShaderSlangTest.cpp" />
     <ClCompile Include="VulkanBase\ShaderCompiler.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="VulkanBase\VkShader.cpp" />
