@@ -129,16 +129,34 @@ void VulkanBase::WaitForFence(uint32_t& frameIndex)
 	{
 		std::cout << std::format("ERROR : [VulkanBase] vkWaitForFences error : {}\n", (int32_t)result);
 	}
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	
+	/*if (VkResult result = vkResetFences(_device, 1, &_frame_fences[frameIndex]))
+	{
+		std::cout << std::format("ERROR : [VulkanBase] vkResetFences error : {}\n", (int32_t)result);
+	}*/
+}
+
+int VulkanBase::AcquireNextImage(uint32_t& frameIndex)
+{
+	VkResult result = vkAcquireNextImageKHR(_device, _swap_chain, UINT64_MAX, _acquire_semaphores[frameIndex], VK_NULL_HANDLE, &ImageIndex);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		_recreate_swap_chain();
+		return -1;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		std::cout << std::format("ERROR : [VulkanBase] failed to acquire swap chain image! \n");
+		return -2;
+	}
+
+	// 延迟重置围栏
 	if (VkResult result = vkResetFences(_device, 1, &_frame_fences[frameIndex]))
 	{
 		std::cout << std::format("ERROR : [VulkanBase] vkResetFences error : {}\n", (int32_t)result);
 	}
-}
 
-void VulkanBase::AcquireNextImage(uint32_t& frameIndex)
-{
-	vkAcquireNextImageKHR(_device, _swap_chain, UINT64_MAX, _acquire_semaphores[frameIndex], VK_NULL_HANDLE, &ImageIndex);
+	return 0;
 }
 
 void VulkanBase::ResetCommandBuffer()
@@ -191,7 +209,13 @@ void VulkanBase::Present(uint32_t& frameIndex)
 	presentInfo.pImageIndices = &ImageIndex;
 	presentInfo.pResults = nullptr;
 
-	if (VkResult result = vkQueuePresentKHR(_present_queue, &presentInfo))
+	VkResult result = vkQueuePresentKHR(_present_queue, &presentInfo);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebuffer_resized)
+	{
+		_framebuffer_resized = false;
+		_recreate_swap_chain();
+	}
+	else if (result != VK_SUCCESS)
 	{
 		std::cout << std::format("ERROR : failed to present swap chain image! error code : {} \n", int32_t(result));
 	}
@@ -311,6 +335,13 @@ void VulkanBase::AddInstanceExtension(const char* extensionName)
 void VulkanBase::AddDeviceExtension(const char* extensionName)
 {
 	deviceExtensions.push_back(extensionName);
+}
+
+void VulkanBase::FrameBufferResize(uint32_t width, uint32_t height)
+{
+	_frame_buffer_width = width;
+	_frame_buffer_height = height;
+	this->_framebuffer_resized = true;
 }
 
 bool VulkanBase::_create_instance()
@@ -567,6 +598,10 @@ bool VulkanBase::_create_logical_device()
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 
+	VkPhysicalDeviceVulkan11Features feat11 = {};
+	feat11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+	feat11.shaderDrawParameters = VK_TRUE;
+
 	VkDeviceCreateInfo deviceCreateInfo{};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -580,6 +615,7 @@ bool VulkanBase::_create_logical_device()
 #else
 	deviceCreateInfo.enabledLayerCount = 0;
 #endif
+	deviceCreateInfo.pNext = &feat11;
 	
 
 	if (VkResult result = vkCreateDevice(_physical_device, &deviceCreateInfo, nullptr, &_device))
@@ -603,6 +639,13 @@ bool VulkanBase::_create_swap_chain()
 {
 	auto surfaceFormat = _choose_swap_surface_format(_swap_chain_support.Formats);
 	auto presentMode = _choose_swap_presenta_mode(_swap_chain_support.PresentModes);
+	
+	// 获取最新的 Surface Capabilities
+	if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physical_device, _surface, &_swap_chain_support.Capabilities))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to Get Physical Device Surface Capabilities! Error code: {}\n", int32_t(result));
+		return false;
+	}
 	auto extent = _choose_swap_extent(_swap_chain_support.Capabilities);
 
 	uint32_t imageCount = _swap_chain_support.Capabilities.minImageCount + 1;
@@ -674,6 +717,41 @@ bool VulkanBase::_create_swap_chain()
 	_swap_chain_image_format = surfaceFormat.format;
 	_swap_chain_extent = extent;
 	_swap_chain_image_count = swapchainImageCount;
+
+	return true;
+}
+
+bool VulkanBase::_recreate_swap_chain()
+{
+	while (_frame_buffer_width == 0 || _frame_buffer_height == 0)
+	{
+		
+	}
+
+	vkDeviceWaitIdle(_device);
+
+	if (!_cleanup_swap_chain()) return false;
+
+	if (!_create_swap_chain()) return false;
+	if (!_create_image_views()) return false;
+	if (!_create_framebuffers()) return false;
+
+	return true;
+}
+
+bool VulkanBase::_cleanup_swap_chain()
+{
+	for (auto framebuffer : _swap_chain_framebuffers)
+	{
+		vkDestroyFramebuffer(_device, framebuffer, nullptr);
+	}
+
+	for (auto imageView : _swap_chain_image_views)
+	{
+		vkDestroyImageView(_device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(_device, _swap_chain, nullptr);
 
 	return true;
 }
@@ -756,9 +834,9 @@ bool VulkanBase::_create_render_pass()
 
 bool VulkanBase::_create_graphics_pipeline()
 {
-	auto vert_path = RunPath + "\\shader\\vulkan\\SPV\\FirstTriangle.vert.spv";
+	auto vert_path = RunPath + "\\shader\\vulkan\\SPV\\fristTriangle.slang.vert.spv";
 	VkEngineShaderModule vertShaderModule(_device, vert_path);
-	auto frag_path = RunPath + "\\shader\\vulkan\\SPV\\FirstTriangle.frag.spv";
+	auto frag_path = RunPath + "\\shader\\vulkan\\SPV\\fristTriangle.slang.frag.spv";
 	VkEngineShaderModule fragShaderModule(_device, frag_path);
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};

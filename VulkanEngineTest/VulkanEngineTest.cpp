@@ -53,6 +53,11 @@ bool InitializeWindow(VkExtent2D size, bool fullScreen = false, bool isResizable
         return false;
     }
 
+    glfwSetFramebufferSizeCallback(glfw_window, [](GLFWwindow* window, int width, int height) {
+        
+        VulkanBase::Base().FrameBufferResize(width, height);
+        });
+
     // 用glfwGetRequiredInstanceExtensions(...)获取平台所需的扩展，若执行成功，返回一个指针，指向一个由所需扩展的名称为元素的数组，
     // 失败则返回nullptr，并意味着此设备不支持Vulkan。
     uint32_t extensionCount = 0;
@@ -116,43 +121,43 @@ void TitleFps()
     }
 }
 
-#ifdef _WIN32
-void executeAndPrint(const char* command)
-{
-    FILE* pipe = _popen(command, "r");
-    if (!pipe)
-    {
-        std::cerr << "popen failed!" << std::endl;
-        return;
-    }
-
-    char buffer[128];
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
-    {
-        std::cout << "lv se: " << buffer;
-    }
-
-    _pclose(pipe);
-}
-#endif // _WIN32
+//#ifdef _WIN32
+//void executeAndPrint(const char* command)
+//{
+//    FILE* pipe = _popen(command, "r");
+//    if (!pipe)
+//    {
+//        std::cerr << "popen failed!" << std::endl;
+//        return;
+//    }
+//
+//    char buffer[128];
+//    while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+//    {
+//        std::cout << "lv se: " << buffer;
+//    }
+//
+//    _pclose(pipe);
+//}
+//#endif // _WIN32
 
 int main()
 {
-    std::string path;
-    try
-    {
-        path = std::filesystem::current_path().string();
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << e.what() << "\n";
-        return -1;
-    }
-    std::cout << path << "\n";
-#ifdef _WIN32
-    //executeAndPrint((path + "\\shader\\vulkan\\compile.bat").c_str());
-    std::cout << "................................................";
-#endif // _WIN32
+//    std::string path;
+//    try
+//    {
+//        path = std::filesystem::current_path().string();
+//    }
+//    catch (const std::exception& e)
+//    {
+//        std::cerr << e.what() << "\n";
+//        return -1;
+//    }
+//    std::cout << path << "\n";
+//#ifdef _WIN32
+//    //executeAndPrint((path + "\\shader\\vulkan\\compile.bat").c_str());
+//    std::cout << "................................................\n";
+//#endif // _WIN32
 
     if (!InitializeWindow({ 1280, 720 }))
         return -1; 
@@ -168,7 +173,17 @@ int main()
 
 		// draw frame
 		VulkanBase::Base().WaitForFence(frameIndex);
-		VulkanBase::Base().AcquireNextImage(frameIndex);
+        if (int res = VulkanBase::Base().AcquireNextImage(frameIndex))
+        {
+            if (res == -1)
+            {
+                continue;
+            }
+            else if (res == -2)
+            {
+                break;
+            }
+        }
 		VulkanBase::Base().ResetCommandBuffer();
 		VulkanBase::Base().RecordCommandBuffer(frameIndex);
         if (!VulkanBase::Base().SubmitCommandBuffer(frameIndex))

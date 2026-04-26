@@ -52,7 +52,7 @@ public:
 
 	// Render command
 	void WaitForFence(uint32_t& frameIndex);
-	void AcquireNextImage(uint32_t& frameIndex);
+	int AcquireNextImage(uint32_t& frameIndex);
 	void ResetCommandBuffer();
 	void RecordCommandBuffer(uint32_t& frameIndex);
 	bool SubmitCommandBuffer(uint32_t& frameIndex);
@@ -67,6 +67,8 @@ public:
 	void AddValidationLayer(const char* layerName);
 	void AddInstanceExtension(const char* extensionName);
 	void AddDeviceExtension(const char* extensionName);
+
+	void FrameBufferResize(uint32_t width, uint32_t height);
 
 protected:
 	virtual bool CreateSurface();
@@ -87,6 +89,8 @@ private:
 	bool _pick_physical_device();
 	bool _create_logical_device();
 	bool _create_swap_chain();
+	bool _recreate_swap_chain();
+	bool _cleanup_swap_chain();
 	bool _create_image_views();
 	bool _create_render_pass();
 	bool _create_graphics_pipeline();
@@ -147,7 +151,7 @@ private:
 	uint32_t _frame_buffer_width = 0;
 	uint32_t _frame_buffer_height = 0;
 
-	
+	bool _framebuffer_resized = false;
 
 };
 

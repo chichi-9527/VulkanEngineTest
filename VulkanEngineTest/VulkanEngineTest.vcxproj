@@ -117,7 +117,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories);$(SolutionDir)ShaderSlang\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)Vulkan\Lib;$(SolutionDir)Glfw34\lib;%(AdditionalIncludeDirectories);$(SolutionDir)ShaderSlang\dlib</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);vulkan-1.lib;glfw3.lib;slang-compiler.lib;compiler-core.lib;core.lib;miniz.lib;lz4.lib</AdditionalDependencies>
       <AdditionalOptions>/NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>

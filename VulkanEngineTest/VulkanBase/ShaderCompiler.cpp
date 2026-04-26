@@ -54,7 +54,7 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
         }
     };
     sessionDesc.compilerOptionEntries = options.data();
-    sessionDesc.compilerOptionEntryCount = options.size();
+    sessionDesc.compilerOptionEntryCount = (uint32_t)options.size();
 
     Slang::ComPtr<slang::ISession> session;
     globalSession->createSession(sessionDesc, session.writeRef());
