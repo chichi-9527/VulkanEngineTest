@@ -13,8 +13,12 @@
 
 #include <filesystem>
 #include <cstdlib>
+#include <array>
 
 #include "VulkanBase/VulkanBase.h"
+#include "VulkanBase/Vertex.h"
+
+#include <glm/glm.hpp>
 
 #include <stb_image.h>
 
@@ -24,6 +28,8 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif // _WIN32
+
+#include "VulkanBase/ShaderCompiler.h"
 
 GLFWwindow* glfw_window;
 GLFWmonitor* glfw_monitor;
@@ -141,6 +147,8 @@ void TitleFps()
 //}
 //#endif // _WIN32
 
+
+
 int main()
 {
 //    std::string path;
@@ -159,6 +167,20 @@ int main()
 //    std::cout << "................................................\n";
 //#endif // _WIN32
 
+    //////////////////////////
+    if (1)
+    {
+        std::vector<std::string> shaderPaths = {
+        ".\\shader\\vulkan\\Slang\\fristTriangle.slang"
+        };
+
+        ShaderCompiler::CompilerShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL");
+    }
+    //////////////////////////
+    
+    //
+
+    // init
     if (!InitializeWindow({ 1280, 720 }))
         return -1; 
 

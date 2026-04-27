@@ -93,7 +93,10 @@ private:
 	bool _cleanup_swap_chain();
 	bool _create_image_views();
 	bool _create_render_pass();
+	//
 	bool _create_graphics_pipeline();
+	//
+	bool _create_vertex_buffer();
 	bool _create_framebuffers();
 	bool _create_command_pool();
 	bool _create_command_buffer();
@@ -138,6 +141,8 @@ private:
 	VkPipeline _graphics_pipeline;
 	VkCommandPool _command_pool;
 	VkCommandBuffer _command_buffer;
+	VkBuffer _vertex_buffer;
+	VkDeviceMemory _vertex_buffer_memory;
 	std::vector<VkSemaphore> _acquire_semaphores;
 	std::vector<VkSemaphore> _submit_semaphores;
 	std::vector<VkFence> _frame_fences;

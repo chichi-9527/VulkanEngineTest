@@ -245,15 +245,15 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
                 }
                 else
                 {
-                    std::cout << "INFO : [ ShaderCompiler ] Compiled SPIR-V done. name: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    std::cout << "INFO : [ ShaderCompiler ] Compiled SPIR-V done. name: " << shaderName << ". stage: " << stageSuffix << std::endl;
                     auto res = WriteFile((const char*)spirvCode->getBufferPointer(), spirvCode->getBufferSize(), out_spv_path, shaderName + "." + stageSuffix + ".spv");
                     if (res)
                     {
-                        std::cout << "INFO : [ ShaderCompiler ] spv write done. file: " << shaderName << "stage: " << stageSuffix << std::endl;
+                        std::cout << "INFO : [ ShaderCompiler ] spv write done. file: " << shaderName << ". stage: " << stageSuffix << std::endl;
                     }
                     else
                     {
-                        std::cout << "ERROR : [ ShaderCompiler ] spv file write error; " << shaderName << "stage: " << stageSuffix << std::endl;
+                        std::cout << "ERROR : [ ShaderCompiler ] spv file write error; " << shaderName << ". stage: " << stageSuffix << std::endl;
                     }
                 }
             }
@@ -273,15 +273,15 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
                 }
                 else
                 {
-                    std::cout << "INFO : [ ShaderCompiler ] Compiled GLSL done. name: " << shaderName << "stage: " << stageSuffix << std::endl;
+                    std::cout << "INFO : [ ShaderCompiler ] Compiled GLSL done. name: " << shaderName << ". stage: " << stageSuffix << std::endl;
                     auto res = WriteFile((const char*)glslCode->getBufferPointer(), glslCode->getBufferSize(), out_glsl_path, shaderName + "." + stageSuffix + ".glsl");
                     if (res)
                     {
-                        std::cout << "INFO : [ ShaderCompiler ] glsl write done. file: " << shaderName << "stage: " << stageSuffix << std::endl;
+                        std::cout << "INFO : [ ShaderCompiler ] glsl write done. file: " << shaderName << ". stage: " << stageSuffix << std::endl;
                     }
                     else
                     {
-                        std::cout << "ERROR : [ ShaderCompiler ] glsl file write error; " << shaderName << "stage: " << stageSuffix << std::endl;
+                        std::cout << "ERROR : [ ShaderCompiler ] glsl file write error; " << shaderName << ". stage: " << stageSuffix << std::endl;
                     }
                 }
             }

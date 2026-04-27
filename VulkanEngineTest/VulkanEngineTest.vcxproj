@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VulkanBase\ShaderCompiler.h" />
+    <ClInclude Include="VulkanBase\Vertex.h" />
     <ClInclude Include="VulkanBase\VkShader.h" />
     <ClInclude Include="VulkanBase\VulkanBase.h" />
   </ItemGroup>
