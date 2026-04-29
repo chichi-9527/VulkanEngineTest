@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SLANG_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;$(SolutionDir)VulkanEngineTest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -130,7 +130,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SLANG_STATIC;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Vulkan\Include;$(SolutionDir)Glm1.0.1;$(SolutionDir)Glfw34\include;$(SolutionDir)StbImage;$(SolutionDir)ShaderSlang\include;$(SolutionDir)VulkanEngineTest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -150,6 +150,7 @@
     <ClCompile Include="VulkanBase\VkShader.cpp" />
     <ClCompile Include="VulkanBase\VulkanBase.cpp" />
     <ClCompile Include="VulkanEngineTest.cpp" />
+    <ClCompile Include="VulkanMemoryAllocator\VmaUsage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VulkanBase\Buffer.h" />
@@ -157,6 +158,8 @@
     <ClInclude Include="VulkanBase\Vertex.h" />
     <ClInclude Include="VulkanBase\VkShader.h" />
     <ClInclude Include="VulkanBase\VulkanBase.h" />
+    <ClInclude Include="VulkanMemoryAllocator\vk_mem_alloc.h" />
+    <ClInclude Include="VulkanMemoryAllocator\VmaUsage.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

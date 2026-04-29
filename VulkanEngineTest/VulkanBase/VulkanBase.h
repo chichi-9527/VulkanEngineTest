@@ -15,6 +15,9 @@ class VulkanBase
 public:
 	~VulkanBase();
 
+	static void CreateVmaAllocator(VkInstance instance, VkDevice device, VkPhysicalDevice physical_device);
+	static void DestoryVmaAllocator();
+
 	struct QueueFamilyIndices {
 		uint32_t GraphicsFamily = 0;
 		uint32_t PresentFamily = 0;
@@ -65,12 +68,20 @@ public:
 		VkBuffer& buffer,
 		VkDeviceMemory& buffer_memory);
 
+	bool UseVmaCreateBuffer(VkDeviceSize size,
+		VkBufferUsageFlags usage,
+		VkMemoryPropertyFlags properties,
+		VkBuffer& buffer,
+		VkDeviceMemory& buffer_memory);
+
+	void UseVmaDestroyBuffer(VkBuffer buffer);
+
 	bool CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
 
 	//void DrawFrame();
 	//
 
-	void CleanUp() const;
+	void CleanUp();
 
 	void AddValidationLayer(const char* layerName);
 	void AddInstanceExtension(const char* extensionName);
@@ -105,6 +116,7 @@ private:
 	bool _create_graphics_pipeline();
 	//
 	bool _create_vertex_buffer();
+	bool _vma_create_vertex_buffer();
 	bool _create_framebuffers();
 	bool _create_command_pool();
 	bool _create_command_buffer();

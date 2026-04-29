@@ -1,9 +1,5 @@
 ﻿// 模拟预处理头
-#ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#define NOMINMAX
-#endif
-#include <vulkan/vulkan.h>
+#include "VulkanMemoryAllocator/VmaUsage.h"
 
 #include "VulkanBase.h"
 #include "Vertex.h"
@@ -13,6 +9,7 @@
 #include <format>
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include <limits>
 #include <algorithm>
 #include <fstream>
@@ -23,6 +20,9 @@
 constexpr unsigned int MAX_FRAMES_IN_FLIGHT = 2;
 static auto RunPath = std::filesystem::current_path().string();
 static uint32_t ImageIndex = 0;
+
+static VmaAllocator vmaAllocator = nullptr;
+static std::unordered_map<VkBuffer, VmaAllocation> MapBufferAllocation;
 
 const std::vector<Vertex> vertices = {
 		{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
@@ -93,6 +93,30 @@ VulkanBase::VulkanBase()
 VulkanBase::~VulkanBase()
 {}
 
+void VulkanBase::CreateVmaAllocator(VkInstance instance, VkDevice device, VkPhysicalDevice physical_device)
+{
+	VmaVulkanFunctions vulkanFunctions = {};
+	vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+	VmaAllocatorCreateInfo allocatorCreateInfo = {};
+	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+	allocatorCreateInfo.vulkanApiVersion = VulkanBase::Base().GetVulkanVersion();
+	allocatorCreateInfo.physicalDevice = physical_device;
+	allocatorCreateInfo.device = device;
+	allocatorCreateInfo.instance = instance;
+	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+	vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator);
+
+	std::cout << std::format("INFO : [VulkanBase] Create Vma Allocator done. \n");
+}
+
+void VulkanBase::DestoryVmaAllocator()
+{
+	vmaDestroyAllocator(vmaAllocator);
+}
+
 VulkanBase& VulkanBase::Base()
 {
 	static VulkanBase base;
@@ -120,11 +144,13 @@ bool VulkanBase::InitVulkan()
 	_create_logical_device();
 	_create_swap_chain();
 	_create_image_views();
+	VulkanBase::CreateVmaAllocator(_instance, _device, _physical_device);
 	_create_render_pass();
 	_create_graphics_pipeline();
 	_create_framebuffers();
 	_create_command_pool();
-	_create_vertex_buffer();
+	//_create_vertex_buffer();
+	_vma_create_vertex_buffer();
 	_create_command_buffer();
 	_create_sync_objects();
 	return true;
@@ -286,6 +312,44 @@ bool VulkanBase::CreateBuffer(VkDeviceSize size,
 	return true;
 }
 
+bool VulkanBase::UseVmaCreateBuffer(VkDeviceSize size,
+	VkBufferUsageFlags usage, 
+	VkMemoryPropertyFlags properties,
+	VkBuffer& buffer, 
+	VkDeviceMemory& buffer_memory)
+{
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo vmaAllocInfo{};
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	if (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+	{
+		vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	}
+
+	VmaAllocation allocation;
+	if (VkResult result = vmaCreateBuffer(vmaAllocator, &bufferInfo, &vmaAllocInfo, &buffer, &allocation, nullptr))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create buffer! VkBufferUsageFlags : {},  Error code: {}\n", int32_t(usage), int32_t(result));
+		return false;
+	}
+
+	MapBufferAllocation[buffer] = allocation;
+
+	return true;
+}
+
+void VulkanBase::UseVmaDestroyBuffer(VkBuffer buffer)
+{
+	auto iter = MapBufferAllocation.find(buffer);
+	if (iter != MapBufferAllocation.end())
+		vmaDestroyBuffer(vmaAllocator, buffer, iter->second);
+}
+
 bool VulkanBase::CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
 {
 	VkCommandBufferAllocateInfo allocInfo{};
@@ -372,7 +436,7 @@ bool VulkanBase::CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSi
 //	vkQueuePresentKHR(_present_queue, &presentInfo);
 //}
 
-void VulkanBase::CleanUp() const
+void VulkanBase::CleanUp()
 {
 #if defined(UseDebugMessenger) || !defined(NDEBUG)
 	DestroyDebugUtilsMessengerEXT(_instance, _debug_messenger, nullptr);
@@ -401,12 +465,15 @@ void VulkanBase::CleanUp() const
 		vkDestroyFramebuffer(_device, framebuffer, nullptr);
 	}
 
-	vkDestroyBuffer(_device, _vertex_buffer, nullptr);
-	vkFreeMemory(_device, _vertex_buffer_memory, nullptr);
+	//vkDestroyBuffer(_device, _vertex_buffer, nullptr);
+	UseVmaDestroyBuffer(_vertex_buffer);
+	//vkFreeMemory(_device, _vertex_buffer_memory, nullptr);
 	
 	vkDestroyPipeline(_device, _graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
 	vkDestroyRenderPass(_device, _render_pass, nullptr);
+
+	VulkanBase::DestoryVmaAllocator();
 
 	for (auto imageView : _swap_chain_image_views)
 	{
@@ -1104,6 +1171,43 @@ bool VulkanBase::_create_vertex_buffer()
 
 	vkDestroyBuffer(_device, stagingBuffer, nullptr);
 	vkFreeMemory(_device, stagingBufferMemory, nullptr);
+
+	return true;
+}
+
+bool VulkanBase::_vma_create_vertex_buffer()
+{
+	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+
+	if (!UseVmaCreateBuffer(bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer,
+		stagingBufferMemory))
+	{
+		return false;
+	}
+
+	void* data;
+	vmaMapMemory(vmaAllocator, MapBufferAllocation[stagingBuffer], &data);
+	memcpy(data, vertices.data(), (size_t)bufferSize);
+	vmaUnmapMemory(vmaAllocator, MapBufferAllocation[stagingBuffer]);
+
+	if (!UseVmaCreateBuffer(bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vertex_buffer,
+		_vertex_buffer_memory))
+	{
+		return false;
+	}
+
+	CopyBuffer(stagingBuffer, _vertex_buffer, bufferSize);
+
+	UseVmaDestroyBuffer(stagingBuffer);
 
 	return true;
 }
