@@ -71,8 +71,7 @@ public:
 	bool UseVmaCreateBuffer(VkDeviceSize size,
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags properties,
-		VkBuffer& buffer,
-		VkDeviceMemory& buffer_memory);
+		VkBuffer& buffer);
 
 	void UseVmaDestroyBuffer(VkBuffer buffer);
 
@@ -117,6 +116,7 @@ private:
 	//
 	bool _create_vertex_buffer();
 	bool _vma_create_vertex_buffer();
+	bool _vma_create_index_buffer();
 	bool _create_framebuffers();
 	bool _create_command_pool();
 	bool _create_command_buffer();
@@ -163,6 +163,7 @@ private:
 	VkCommandBuffer _command_buffer;
 	VkBuffer _vertex_buffer;
 	VkDeviceMemory _vertex_buffer_memory;
+	VkBuffer _index_buffer;
 	std::vector<VkSemaphore> _acquire_semaphores;
 	std::vector<VkSemaphore> _submit_semaphores;
 	std::vector<VkFence> _frame_fences;

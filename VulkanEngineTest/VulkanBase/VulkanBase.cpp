@@ -25,9 +25,14 @@ static VmaAllocator vmaAllocator = nullptr;
 static std::unordered_map<VkBuffer, VmaAllocation> MapBufferAllocation;
 
 const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+	0,1,2,2,3,0
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -151,6 +156,7 @@ bool VulkanBase::InitVulkan()
 	_create_command_pool();
 	//_create_vertex_buffer();
 	_vma_create_vertex_buffer();
+	_vma_create_index_buffer();
 	_create_command_buffer();
 	_create_sync_objects();
 	return true;
@@ -315,8 +321,7 @@ bool VulkanBase::CreateBuffer(VkDeviceSize size,
 bool VulkanBase::UseVmaCreateBuffer(VkDeviceSize size,
 	VkBufferUsageFlags usage, 
 	VkMemoryPropertyFlags properties,
-	VkBuffer& buffer, 
-	VkDeviceMemory& buffer_memory)
+	VkBuffer& buffer)
 {
 	VkBufferCreateInfo bufferInfo{};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -348,6 +353,7 @@ void VulkanBase::UseVmaDestroyBuffer(VkBuffer buffer)
 	auto iter = MapBufferAllocation.find(buffer);
 	if (iter != MapBufferAllocation.end())
 		vmaDestroyBuffer(vmaAllocator, buffer, iter->second);
+	MapBufferAllocation.erase(buffer);
 }
 
 bool VulkanBase::CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
@@ -468,6 +474,7 @@ void VulkanBase::CleanUp()
 	//vkDestroyBuffer(_device, _vertex_buffer, nullptr);
 	UseVmaDestroyBuffer(_vertex_buffer);
 	//vkFreeMemory(_device, _vertex_buffer_memory, nullptr);
+	UseVmaDestroyBuffer(_index_buffer);
 	
 	vkDestroyPipeline(_device, _graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
@@ -1180,13 +1187,11 @@ bool VulkanBase::_vma_create_vertex_buffer()
 	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
 	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
 
 	if (!UseVmaCreateBuffer(bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory))
+		stagingBuffer))
 	{
 		return false;
 	}
@@ -1199,13 +1204,45 @@ bool VulkanBase::_vma_create_vertex_buffer()
 	if (!UseVmaCreateBuffer(bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		_vertex_buffer,
-		_vertex_buffer_memory))
+		_vertex_buffer))
 	{
 		return false;
 	}
 
 	CopyBuffer(stagingBuffer, _vertex_buffer, bufferSize);
+
+	UseVmaDestroyBuffer(stagingBuffer);
+
+	return true;
+}
+
+bool VulkanBase::_vma_create_index_buffer()
+{
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+	VkBuffer stagingBuffer;
+	if (!UseVmaCreateBuffer(bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer))
+	{
+		return false;
+	}
+
+	void* data;
+	vmaMapMemory(vmaAllocator, MapBufferAllocation[stagingBuffer], &data);
+	memcpy(data, indices.data(), (size_t)bufferSize);
+	vmaUnmapMemory(vmaAllocator, MapBufferAllocation[stagingBuffer]);
+
+	if (!UseVmaCreateBuffer(bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_index_buffer))
+	{
+		return false;
+	}
+
+	CopyBuffer(stagingBuffer, _index_buffer, bufferSize);
 
 	UseVmaDestroyBuffer(stagingBuffer);
 
@@ -1317,7 +1354,10 @@ bool VulkanBase::_record_command_buffer(uint32_t imageIndex)
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(_command_buffer, 0, 1, vertexBuffers, offsets);
 
-	vkCmdDraw(_command_buffer, 3, 1, 0, 0);
+	vkCmdBindIndexBuffer(_command_buffer, _index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	//vkCmdDraw(_command_buffer, 3, 1, 0, 0);
+	vkCmdDrawIndexed(_command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 	vkCmdEndRenderPass(_command_buffer);
 
 	if (VkResult result = vkEndCommandBuffer(_command_buffer))
