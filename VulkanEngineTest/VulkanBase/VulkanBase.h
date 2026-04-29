@@ -59,6 +59,14 @@ public:
 	void Present(uint32_t& frameIndex);
 	void WaitIdle();
 
+	bool CreateBuffer(VkDeviceSize size,
+		VkBufferUsageFlags usage,
+		VkMemoryPropertyFlags properties,
+		VkBuffer& buffer,
+		VkDeviceMemory& buffer_memory);
+
+	bool CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+
 	//void DrawFrame();
 	//
 

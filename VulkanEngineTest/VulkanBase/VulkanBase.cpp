@@ -233,6 +233,97 @@ void VulkanBase::WaitIdle()
 	vkDeviceWaitIdle(_device);
 }
 
+bool VulkanBase::CreateBuffer(VkDeviceSize size,
+	VkBufferUsageFlags usage,
+	VkMemoryPropertyFlags properties,
+	VkBuffer& buffer,
+	VkDeviceMemory& buffer_memory)
+{
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (VkResult result = vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create buffer! VkBufferUsageFlags : {},  Error code: {}\n", int32_t(usage), int32_t(result));
+		return false;
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
+
+	auto findMemoryType = [this](uint32_t type_filter, VkMemoryPropertyFlags properties) -> uint32_t {
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(_physical_device, &memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+		{
+			if ((type_filter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+			{
+				return i;
+			}
+		}
+
+		std::cout << std::format("ERROR : [ VulkanBase ] failed to find suitable memory type!\n");
+		return (uint32_t)-1;
+		};
+
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	if (VkResult result = vkAllocateMemory(_device, &allocInfo, nullptr, &buffer_memory))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to allocate vertex buffer memory! Error code: {}\n", int32_t(result));
+		return false;
+	}
+
+	vkBindBufferMemory(_device, buffer, buffer_memory, 0);
+
+	return true;
+}
+
+bool VulkanBase::CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size)
+{
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = _command_pool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = 0;
+	copyRegion.dstOffset = 0;
+	copyRegion.size = size;
+	vkCmdCopyBuffer(commandBuffer, src_buffer, dst_buffer, 1, &copyRegion);
+
+	vkEndCommandBuffer(commandBuffer);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(_graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(_graphics_queue); // vkWaitForFences
+
+	vkFreeCommandBuffers(_device, _command_pool, 1, &commandBuffer);
+
+	return true;
+}
+
 //void VulkanBase::DrawFrame()
 //{
 //	vkWaitForFences(_device, 1, &_in_flight_fence, VK_TRUE, UINT64_MAX);
@@ -980,54 +1071,39 @@ bool VulkanBase::_create_graphics_pipeline()
 
 bool VulkanBase::_create_vertex_buffer()
 {
-	VkBufferCreateInfo bufferInfo{};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	
+	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-	if (VkResult result = vkCreateBuffer(_device, &bufferInfo, nullptr, &_vertex_buffer))
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+
+	if (!CreateBuffer(bufferSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		stagingBuffer, 
+		stagingBufferMemory))
 	{
-		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create vertex buffer! Error code: {}\n", int32_t(result));
 		return false;
 	}
-
-	auto findMemoryType = [this](uint32_t type_filter, VkMemoryPropertyFlags properties) -> uint32_t {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(_physical_device, &memProperties);
-
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
-		{
-			if ((type_filter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-			{
-				return i;
-			}
-		}
-
-		std::cout << std::format("ERROR : [ VulkanBase ] failed to find suitable memory type!\n");
-		return (uint32_t)-1;
-		};
-
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(_device, _vertex_buffer, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	if (VkResult result = vkAllocateMemory(_device, &allocInfo, nullptr, &_vertex_buffer_memory))
-	{
-		std::cout << std::format("ERROR : [ VulkanBase ] Failed to allocate vertex buffer memory! Error code: {}\n", int32_t(result));
-		return false;
-	}
-
-	vkBindBufferMemory(_device, _vertex_buffer, _vertex_buffer_memory, 0);
 
 	void* data;
-	vkMapMemory(_device, _vertex_buffer_memory, 0, bufferInfo.size, 0, &data);
-	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-	vkUnmapMemory(_device, _vertex_buffer_memory);
+	vkMapMemory(_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, vertices.data(), (size_t)bufferSize);
+	vkUnmapMemory(_device, stagingBufferMemory);
+
+	if (!CreateBuffer(bufferSize, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vertex_buffer, 
+		_vertex_buffer_memory))
+	{
+		return false;
+	}
+
+	CopyBuffer(stagingBuffer, _vertex_buffer, bufferSize);
+
+	vkDestroyBuffer(_device, stagingBuffer, nullptr);
+	vkFreeMemory(_device, stagingBufferMemory, nullptr);
 
 	return true;
 }

@@ -33,6 +33,9 @@
     <ClCompile Include="ShaderSlangTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="VulkanBase\Buffer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VulkanBase\VulkanBase.h">
@@ -45,6 +48,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="VulkanBase\Vertex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanBase\Buffer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

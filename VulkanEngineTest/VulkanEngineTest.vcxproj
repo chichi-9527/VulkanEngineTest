@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="VulkanBase\Buffer.cpp" />
     <ClCompile Include="ShaderSlangTest.cpp" />
     <ClCompile Include="VulkanBase\ShaderCompiler.cpp" />
     <ClCompile Include="test.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="VulkanEngineTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="VulkanBase\Buffer.h" />
     <ClInclude Include="VulkanBase\ShaderCompiler.h" />
     <ClInclude Include="VulkanBase\Vertex.h" />
     <ClInclude Include="VulkanBase\VkShader.h" />
