@@ -58,6 +58,7 @@ public:
 	int AcquireNextImage(uint32_t& frameIndex);
 	void ResetCommandBuffer();
 	void RecordCommandBuffer(uint32_t& frameIndex);
+	void UpdateUniformBuffer(uint32_t& frameIndex);
 	bool SubmitCommandBuffer(uint32_t& frameIndex);
 	void Present(uint32_t& frameIndex);
 	void WaitIdle();
@@ -111,16 +112,21 @@ private:
 	bool _cleanup_swap_chain();
 	bool _create_image_views();
 	bool _create_render_pass();
+	// ubo
+	bool _create_descriptor_set_layout();
 	//
 	bool _create_graphics_pipeline();
 	//
 	bool _create_vertex_buffer();
 	bool _vma_create_vertex_buffer();
 	bool _vma_create_index_buffer();
+	bool _vma_create_uniform_buffers();
+	bool _create_descriptor_pool();
+	bool _create_descriptor_sets();
 	bool _create_framebuffers();
 	bool _create_command_pool();
 	bool _create_command_buffer();
-	bool _record_command_buffer(uint32_t imageIndex);
+	bool _record_command_buffer(uint32_t imageIndex, uint32_t frame_index);
 	bool _create_sync_objects();
 	VkSurfaceFormatKHR _choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
 	/// <summary>
@@ -156,6 +162,8 @@ private:
 	VkSwapchainKHR _swap_chain;
 	VkFormat _swap_chain_image_format;
 	VkExtent2D _swap_chain_extent;
+	// ubo
+	VkDescriptorSetLayout _descriptor_set_layout;
 	VkPipelineLayout _pipeline_layout;
 	VkRenderPass _render_pass;
 	VkPipeline _graphics_pipeline;
@@ -164,6 +172,12 @@ private:
 	VkBuffer _vertex_buffer;
 	VkDeviceMemory _vertex_buffer_memory;
 	VkBuffer _index_buffer;
+
+	VkDescriptorPool _descriptor_pool;
+	std::vector<VkDescriptorSet> _descriptor_sets;
+	std::vector<VkBuffer> _uniform_buffers;
+	std::vector<void*> _uniform_buffers_mapped;
+
 	std::vector<VkSemaphore> _acquire_semaphores;
 	std::vector<VkSemaphore> _submit_semaphores;
 	std::vector<VkFence> _frame_fences;

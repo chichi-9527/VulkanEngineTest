@@ -7,4 +7,6 @@
 /StbImage
 /VulkanEngineTest/x64
 /ShaderSlang
-/VulkanEngineTest/shader
+/VulkanEngineTest/shader/vulkan/GLSL
+/VulkanEngineTest/shader/vulkan/scripts
+/VulkanEngineTest/shader/vulkan/SPV

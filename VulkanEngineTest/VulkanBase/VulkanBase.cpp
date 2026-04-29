@@ -5,6 +5,10 @@
 #include "Vertex.h"
 #include "VkShader.h"
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 #include <format>
 #include <vector>
@@ -16,6 +20,8 @@
 #include <filesystem>
 #include <chrono>
 #include <thread>
+
+static auto StartTime = std::chrono::high_resolution_clock::now();
 
 constexpr unsigned int MAX_FRAMES_IN_FLIGHT = 2;
 static auto RunPath = std::filesystem::current_path().string();
@@ -33,6 +39,12 @@ const std::vector<Vertex> vertices = {
 
 const std::vector<uint16_t> indices = {
 	0,1,2,2,3,0
+};
+
+struct UniformBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -151,12 +163,16 @@ bool VulkanBase::InitVulkan()
 	_create_image_views();
 	VulkanBase::CreateVmaAllocator(_instance, _device, _physical_device);
 	_create_render_pass();
+	_create_descriptor_set_layout();
 	_create_graphics_pipeline();
 	_create_framebuffers();
 	_create_command_pool();
 	//_create_vertex_buffer();
 	_vma_create_vertex_buffer();
 	_vma_create_index_buffer();
+	_vma_create_uniform_buffers();
+	_create_descriptor_pool();
+	_create_descriptor_sets();
 	_create_command_buffer();
 	_create_sync_objects();
 	return true;
@@ -189,6 +205,8 @@ int VulkanBase::AcquireNextImage(uint32_t& frameIndex)
 		return -2;
 	}
 
+	UpdateUniformBuffer(frameIndex);
+
 	// 延迟重置围栏
 	if (VkResult result = vkResetFences(_device, 1, &_frame_fences[frameIndex]))
 	{
@@ -205,7 +223,21 @@ void VulkanBase::ResetCommandBuffer()
 
 void VulkanBase::RecordCommandBuffer(uint32_t& frameIndex)
 {
-	_record_command_buffer(ImageIndex);
+	_record_command_buffer(ImageIndex, frameIndex);
+}
+
+void VulkanBase::UpdateUniformBuffer(uint32_t& frameIndex)
+{
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - StartTime).count();
+
+	UniformBufferObject ubo{};
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), _swap_chain_extent.width / (float)_swap_chain_extent.height, 0.1f, 10.0f);
+	ubo.proj[1][1] *= -1;
+
+	memcpy(_uniform_buffers_mapped[frameIndex], &ubo, sizeof(ubo));
 }
 
 bool VulkanBase::SubmitCommandBuffer(uint32_t& frameIndex)
@@ -475,6 +507,16 @@ void VulkanBase::CleanUp()
 	UseVmaDestroyBuffer(_vertex_buffer);
 	//vkFreeMemory(_device, _vertex_buffer_memory, nullptr);
 	UseVmaDestroyBuffer(_index_buffer);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		vmaUnmapMemory(vmaAllocator, MapBufferAllocation[_uniform_buffers[i]]);
+		UseVmaDestroyBuffer(_uniform_buffers[i]);
+	}
+
+	vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr);
+
+	vkDestroyDescriptorSetLayout(_device, _descriptor_set_layout, nullptr);
 	
 	vkDestroyPipeline(_device, _graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
@@ -1007,6 +1049,30 @@ bool VulkanBase::_create_render_pass()
 	return true;
 }
 
+bool VulkanBase::_create_descriptor_set_layout()
+{
+	VkDescriptorSetLayoutBinding uboLayoutBinding{};
+	uboLayoutBinding.binding = 0;
+	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uboLayoutBinding.descriptorCount = 1;
+	// 着色器阶段
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings = &uboLayoutBinding;
+
+	if (VkResult result = vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &_descriptor_set_layout))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create descriptor set layout! Error code: {}\n", int32_t(result));
+		return false;
+	}
+
+	return true;
+}
+
 bool VulkanBase::_create_graphics_pipeline()
 {
 	auto vert_path = RunPath + "\\shader\\vulkan\\SPV\\fristTriangle.slang.vert.spv";
@@ -1065,7 +1131,8 @@ bool VulkanBase::_create_graphics_pipeline()
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	//rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f;
 	rasterizer.depthBiasClamp = 0.0f;
@@ -1103,8 +1170,8 @@ bool VulkanBase::_create_graphics_pipeline()
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0;
-	pipelineLayoutInfo.pSetLayouts = nullptr;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &_descriptor_set_layout;
 	pipelineLayoutInfo.pushConstantRangeCount = 0;
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
@@ -1249,6 +1316,91 @@ bool VulkanBase::_vma_create_index_buffer()
 	return true;
 }
 
+bool VulkanBase::_vma_create_uniform_buffers()
+{
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	_uniform_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+	_uniform_buffers_mapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		if (!UseVmaCreateBuffer(bufferSize,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			_uniform_buffers[i]))
+		{
+			return false;
+		}
+		vmaMapMemory(vmaAllocator, MapBufferAllocation[_uniform_buffers[i]], &_uniform_buffers_mapped[i]);
+	}
+
+	return true;
+}
+
+bool VulkanBase::_create_descriptor_pool()
+{
+	VkDescriptorPoolSize poolSize{};
+	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes = &poolSize;
+	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+	if (VkResult result = vkCreateDescriptorPool(_device, &poolInfo, nullptr, &_descriptor_pool))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create descriptor pool! Error code: {}\n", int32_t(result));
+		return false;
+	}
+
+	return true;
+}
+
+bool VulkanBase::_create_descriptor_sets()
+{
+	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, _descriptor_set_layout);
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = _descriptor_pool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	allocInfo.pSetLayouts = layouts.data();
+
+	_descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
+	if (VkResult result = vkAllocateDescriptorSets(_device, &allocInfo, _descriptor_sets.data()))
+	{
+		std::cout << std::format("ERROR : [ VulkanBase ] Failed to allocate descriptor sets! Error code: {}\n", int32_t(result));
+		return false;
+	}
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = _uniform_buffers[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = _descriptor_sets[i];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		descriptorWrite.pImageInfo = nullptr; // Optional
+		descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+		vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+	}
+
+	
+
+	return true;
+}
+
 bool VulkanBase::_create_framebuffers()
 {
 	_swap_chain_framebuffers.resize(_swap_chain_image_views.size());
@@ -1308,7 +1460,7 @@ bool VulkanBase::_create_command_buffer()
 	return true;
 }
 
-bool VulkanBase::_record_command_buffer(uint32_t imageIndex)
+bool VulkanBase::_record_command_buffer(uint32_t imageIndex, uint32_t frame_index)
 {
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1355,6 +1507,8 @@ bool VulkanBase::_record_command_buffer(uint32_t imageIndex)
 	vkCmdBindVertexBuffers(_command_buffer, 0, 1, vertexBuffers, offsets);
 
 	vkCmdBindIndexBuffer(_command_buffer, _index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline_layout, 0, 1, &_descriptor_sets[frame_index], 0, nullptr);
 
 	//vkCmdDraw(_command_buffer, 3, 1, 0, 0);
 	vkCmdDrawIndexed(_command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
