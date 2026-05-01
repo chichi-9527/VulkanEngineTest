@@ -18,7 +18,9 @@ static void diagnoseIfNeeded(slang::IBlob* diagnosticsBlob)
     }
 }
 
-bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_paths, const std::string& out_spv_path, const std::string& out_glsl_path)
+bool ShaderCompiler::CompileShaders(const std::vector<std::pair<std::string, CompFileFindCriteria>>& shader_paths
+    , const std::string& out_spv_path, const std::string& out_glsl_path
+    , bool always_compile)
 {
     // 1. Create Global Session
     Slang::ComPtr<slang::IGlobalSession> globalSession;
@@ -64,7 +66,7 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
     bool hasShader = false;
     bool hasFile1 = true;
     bool hasFile2 = true;
-    for (auto& path : shader_paths)
+    for (auto& [path, criteria] : shader_paths)
     {
         auto lp = path.find_last_of("/\\");
         if (lp + 1 < path.size())
@@ -78,20 +80,46 @@ bool ShaderCompiler::CompilerShaders(const std::vector<std::string>& shader_path
             std::cout << "ERROR : [ ShaderCompiler ] not find slang file" << std::endl;
             continue;
         }
-        if (!out_spv_path.empty())
+        if (!always_compile)
         {
-            hasFile1 = std::filesystem::exists(out_spv_path + ".\\" + shaderName + ".spv");
-        }
-        if (!out_glsl_path.empty())
-        {
-            hasFile2 = std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".glsl");
-        }
-        if (hasFile1 && hasFile2)
-        {
-            std::cout << std::format("INFO : [ ShaderCompiler ] file is compiled.: {}", shaderName) << std::endl;
-            continue;
-        }
+            if (!out_spv_path.empty())
+            {
+                if (criteria & CompFileFindCriteria::STAGE_VERTEX)
+                {
+                    hasFile1 = hasFile1 && std::filesystem::exists(out_spv_path + ".\\" + shaderName + ".vert.spv");
+                }
+                if (criteria & CompFileFindCriteria::STAGE_FRAGMENT)
+                {
+                    hasFile1 = hasFile1 && std::filesystem::exists(out_spv_path + ".\\" + shaderName + ".frag.spv");
+                }
+                if (criteria & CompFileFindCriteria::STAGE_COMPUTE)
+                {
+                    hasFile1 = hasFile1 && std::filesystem::exists(out_spv_path + ".\\" + shaderName + ".comp.spv");
+                }
 
+            }
+            if (!out_glsl_path.empty())
+            {
+                if (criteria & CompFileFindCriteria::STAGE_VERTEX)
+                {
+                    hasFile2 = hasFile2 && std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".vert.glsl");
+                }
+                if (criteria & CompFileFindCriteria::STAGE_FRAGMENT)
+                {
+                    hasFile2 = hasFile2 && std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".frag.glsl");
+                }
+                if (criteria & CompFileFindCriteria::STAGE_COMPUTE)
+                {
+                    hasFile2 = hasFile2 && std::filesystem::exists(out_glsl_path + ".\\" + shaderName + ".comp.glsl");
+                }
+            }
+            if (hasFile1 && hasFile2)
+            {
+                std::cout << std::format("INFO : [ ShaderCompiler ] file is compiled.: {}", shaderName) << std::endl;
+                continue;
+            }
+        }
+        
         auto shaderSource = ReadFile(path);
         //std::cout << shaderSource.size() << "\n";
 

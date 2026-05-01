@@ -170,11 +170,11 @@ int main()
     //////////////////////////
     if (1)
     {
-        std::vector<std::string> shaderPaths = {
-        ".\\shader\\vulkan\\Slang\\fristTriangle.slang"
+        std::vector<std::pair<std::string, ShaderCompiler::CompFileFindCriteria>> shaderPaths = {
+            {".\\shader\\vulkan\\Slang\\fristTriangle.slang", ShaderCompiler::CompFileFindCriteria::STAGE_DEFAULT}
         };
 
-        ShaderCompiler::CompilerShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL");
+        ShaderCompiler::CompileShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL", true);
     }
     //////////////////////////
     

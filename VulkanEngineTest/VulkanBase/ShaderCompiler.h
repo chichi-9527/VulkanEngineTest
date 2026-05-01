@@ -51,12 +51,13 @@ public:
 	/// 
 	/// </summary>
 	/// <param name="shader_paths">文件路径</param>
-	/// <param name="out_spv_path">文件夹路径</param>
-	/// <param name="out_glsl_path">文件夹路径</param>
+	/// <param name="out_spv_path">文件夹路径, mast not empty</param>
+	/// <param name="out_glsl_path">文件夹路径, mast not empty</param>
 	/// <returns></returns>
-	static bool CompilerShaders(const std::vector<std::string>& shader_paths
-		, const std::string& out_spv_path = ""
-		, const std::string& out_glsl_path = "");
+	static bool CompileShaders(const std::vector<std::pair<std::string, CompFileFindCriteria>>& shader_paths
+		, const std::string& out_spv_path
+		, const std::string& out_glsl_path
+		, bool always_compile = false);
 
 	static std::vector<char> ReadFile(const std::string& path);
 

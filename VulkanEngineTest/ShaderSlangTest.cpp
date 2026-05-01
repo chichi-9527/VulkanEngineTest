@@ -2,11 +2,11 @@
 
 int shaderSlangTest()
 {
-    std::vector<std::string> shaderPaths = {
-        ".\\shader\\Slang\\test.slang"
+    std::vector<std::pair<std::string, ShaderCompiler::CompFileFindCriteria>> shaderPaths = {
+        {".\\shader\\Slang\\test.slang",ShaderCompiler::CompFileFindCriteria::STAGE_DEFAULT}
     };
 
-    ShaderCompiler::CompilerShaders(shaderPaths, ".\\shader\\SPV", ".\\shader\\GLSL");
+    ShaderCompiler::CompileShaders(shaderPaths, ".\\shader\\SPV", ".\\shader\\GLSL");
 
     getchar();
     return 0;
