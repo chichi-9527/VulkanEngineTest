@@ -62,5 +62,8 @@
     <ClInclude Include="VulkanMemoryAllocator\VmaUsage.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="StbImage\stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

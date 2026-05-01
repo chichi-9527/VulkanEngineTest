@@ -153,6 +153,7 @@
     <ClCompile Include="VulkanMemoryAllocator\VmaUsage.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="StbImage\stb_image.h" />
     <ClInclude Include="VulkanBase\Buffer.h" />
     <ClInclude Include="VulkanBase\ShaderCompiler.h" />
     <ClInclude Include="VulkanBase\Vertex.h" />

@@ -63,6 +63,8 @@ public:
 	void Present(uint32_t& frameIndex);
 	void WaitIdle();
 
+	VkImageView CreateImageView(VkImage image, VkFormat format);
+
 	bool CreateBuffer(VkDeviceSize size,
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags properties,
@@ -76,10 +78,20 @@ public:
 
 	void UseVmaDestroyBuffer(VkBuffer buffer);
 
-	bool CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+	bool UseVmaCreateImage(uint32_t width,
+		uint32_t height,
+		VkFormat format,
+		VkImageTiling tiling,
+		VkImageUsageFlags usage,
+		VkMemoryPropertyFlags properties,
+		VkImage& image);
 
-	//void DrawFrame();
-	//
+	void UseVmaDestroyImage(VkImage image);
+
+	bool CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize size);
+	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	bool TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
 
 	void CleanUp();
 
@@ -127,7 +139,12 @@ private:
 	bool _create_command_pool();
 	bool _create_command_buffer();
 	bool _record_command_buffer(uint32_t imageIndex, uint32_t frame_index);
+	VkCommandBuffer _begin_single_time_commands();
+	void _end_single_time_commands(VkCommandBuffer command_buffer);
 	bool _create_sync_objects();
+	bool _create_texture_image();
+	bool _create_texture_image_view();
+	bool _create_texture_sampler();
 	VkSurfaceFormatKHR _choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
 	/// <summary>
 	/// VK_PRESENT_MODE_IMMEDIATE_KHR：通过应用程序提交的图像会立即传输到屏幕上;
@@ -172,6 +189,9 @@ private:
 	VkBuffer _vertex_buffer;
 	VkDeviceMemory _vertex_buffer_memory;
 	VkBuffer _index_buffer;
+	VkImage _texture_image;
+	VkImageView _texture_image_view;
+	VkSampler _texture_sampler;
 
 	VkDescriptorPool _descriptor_pool;
 	std::vector<VkDescriptorSet> _descriptor_sets;
