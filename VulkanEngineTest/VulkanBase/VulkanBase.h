@@ -63,7 +63,7 @@ public:
 	void Present(uint32_t& frameIndex);
 	void WaitIdle();
 
-	VkImageView CreateImageView(VkImage image, VkFormat format);
+	VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT);
 
 	bool CreateBuffer(VkDeviceSize size,
 		VkBufferUsageFlags usage,
@@ -145,6 +145,7 @@ private:
 	bool _create_texture_image();
 	bool _create_texture_image_view();
 	bool _create_texture_sampler();
+	bool _create_depth_resources();
 	VkSurfaceFormatKHR _choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
 	/// <summary>
 	/// VK_PRESENT_MODE_IMMEDIATE_KHR：通过应用程序提交的图像会立即传输到屏幕上;
@@ -178,6 +179,7 @@ private:
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swap_chain;
 	VkFormat _swap_chain_image_format;
+	VkFormat _depth_format;
 	VkExtent2D _swap_chain_extent;
 	// ubo
 	VkDescriptorSetLayout _descriptor_set_layout;
@@ -191,6 +193,8 @@ private:
 	VkBuffer _index_buffer;
 	VkImage _texture_image;
 	VkImageView _texture_image_view;
+	VkImage _depth_image;
+	VkImageView _depth_image_view;
 	VkSampler _texture_sampler;
 
 	VkDescriptorPool _descriptor_pool;

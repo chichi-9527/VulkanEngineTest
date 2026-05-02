@@ -12,7 +12,7 @@ struct UniformBufferObject
 
 struct VSInput
 {
-    [[vk::location(0)]] float2 inPosition;
+    [[vk::location(0)]] float3 inPosition;
     [[vk::location(1)]] float3 inColor;
     [[vk::location(2)]] float2 inTexCoord;
 };
@@ -39,7 +39,7 @@ struct PSOutput
 VSOutput vsMain(VSInput input)
 {
     VSOutput output;
-    output.position = mul(float4(input.inPosition, 0.0f, 1.0f),mul(ubo.model,mul(ubo.view,ubo.projection)));
+    output.position = mul(float4(input.inPosition, 1.0f),mul(ubo.model,mul(ubo.view,ubo.projection)));
     output.fragColor = input.inColor;
     output.fragTexCoord = input.inTexCoord;
     return output;
@@ -52,7 +52,7 @@ VSOutput vsMain(VSInput input)
 PSOutput psMain(PSInput input)
 {
     PSOutput output;
-    output.outColor = float4(input.fragColor, 1.0f);
-    output.outColor *= texSampler.Sample(input.fragTexCoord);
+    //output.outColor = float4(input.fragColor, 1.0f);
+    output.outColor = texSampler.Sample(input.fragTexCoord);
     return output;
 }

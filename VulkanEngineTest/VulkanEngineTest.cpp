@@ -168,14 +168,16 @@ int main()
 //#endif // _WIN32
 
     //////////////////////////
-    if (1)
-    {
-        std::vector<std::pair<std::string, ShaderCompiler::CompFileFindCriteria>> shaderPaths = {
-            {".\\shader\\vulkan\\Slang\\fristTriangle.slang", ShaderCompiler::CompFileFindCriteria::STAGE_DEFAULT}
-        };
 
-        ShaderCompiler::CompileShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL", true);
-    }
+    std::vector<std::pair<std::string, ShaderCompiler::CompFileFindCriteria>> shaderPaths = {
+        {".\\shader\\vulkan\\Slang\\fristTriangle.slang", ShaderCompiler::CompFileFindCriteria::STAGE_DEFAULT}
+    };
+#ifndef NDEBUG
+    ShaderCompiler::CompileShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL");
+#else
+    ShaderCompiler::CompileShaders(shaderPaths, ".\\shader\\vulkan\\SPV", ".\\shader\\vulkan\\GLSL", true);
+#endif // !_NDEBUG
+
     //////////////////////////
     
     //
