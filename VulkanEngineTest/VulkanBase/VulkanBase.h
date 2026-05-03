@@ -92,6 +92,7 @@ public:
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 	bool TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
+	void GenerateMipmaps(VkImage image, VkFormat image_format, int32_t tex_width, int32_t tex_height, uint32_t mip_levels);
 
 	void CleanUp();
 
@@ -211,6 +212,9 @@ private:
 	uint32_t _api_version;
 
 	uint32_t _swap_chain_image_count = 0;
+
+	// 
+	uint32_t _mip_levels = 1;
 
 	uint32_t _frame_buffer_width = 0;
 	uint32_t _frame_buffer_height = 0;
