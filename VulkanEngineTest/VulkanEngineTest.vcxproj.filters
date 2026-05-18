@@ -39,6 +39,9 @@
     <ClCompile Include="VulkanMemoryAllocator\VmaUsage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="IMemPool\MemoryPoolTest.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VulkanBase\VulkanBase.h">
@@ -63,6 +66,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="StbImage\stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="IMemPool\IMemPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

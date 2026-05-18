@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="IMemPool\MemoryPoolTest.cpp" />
     <ClCompile Include="VulkanBase\Buffer.cpp" />
     <ClCompile Include="ShaderSlangTest.cpp" />
     <ClCompile Include="VulkanBase\ShaderCompiler.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="VulkanMemoryAllocator\VmaUsage.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IMemPool\IMemPool.h" />
     <ClInclude Include="StbImage\stb_image.h" />
     <ClInclude Include="VulkanBase\Buffer.h" />
     <ClInclude Include="VulkanBase\ShaderCompiler.h" />

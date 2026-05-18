@@ -1,0 +1,3 @@
+﻿a new IMemPool memory allocator (IMemPool.h) 
+implementing fixed-size and general 4KB block pools, intrusive free lists, defragmentation, and a IUserPtr wrapper plus IMemPoolAllocator helper. Add unit-style tests (MemoryPoolTest.cpp/.h) covering fixed-size allocations, general-pool expansion, defragmentation behavior and multithreaded allocation safety. 
+Update project files to include the new test source. This change provides a reusable custom allocator and test coverage for allocation/deallocation, relocation during defragmentation, and concurrency scenarios.
