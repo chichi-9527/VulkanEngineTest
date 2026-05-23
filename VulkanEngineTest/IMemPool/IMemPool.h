@@ -325,7 +325,14 @@ public:
 					ClassName* dstArray = static_cast<ClassName*>(dst);
 					for (uint32_t i = 0; i < count; ++i)
 					{
-						::new (&dstArray[i]) ClassName(std::move(srcArray[i]));
+						if constexpr (std::is_nothrow_move_constructible_v<ClassName>)
+						{
+							::new (&dstArray[i]) ClassName(std::move(srcArray[i]));
+						}
+						else
+						{
+							::new (&dstArray[i]) ClassName(srcArray[i]);
+						}
 						srcArray[i].~ClassName();
 					}
 				}
@@ -423,7 +430,14 @@ public:
 					ClassName* dstArray = static_cast<ClassName*>(dst);
 					for (uint32_t i = 0; i < count; ++i)
 					{
-						::new (&dstArray[i]) ClassName(std::move(srcArray[i]));
+						if constexpr (std::is_nothrow_move_constructible_v<ClassName>)
+						{
+							::new (&dstArray[i]) ClassName(std::move(srcArray[i]));
+						}
+						else
+						{
+							::new (&dstArray[i]) ClassName(srcArray[i]);
+						}
 						srcArray[i].~ClassName();
 					}
 				}

@@ -30,6 +30,7 @@
 #endif // _WIN32
 
 #include "VulkanBase/ShaderCompiler.h"
+#include "IMemPool/MemoryPoolTest.h"
 
 GLFWwindow* glfw_window;
 GLFWmonitor* glfw_monitor;
@@ -151,21 +152,8 @@ void TitleFps()
 
 int main()
 {
-//    std::string path;
-//    try
-//    {
-//        path = std::filesystem::current_path().string();
-//    }
-//    catch (const std::exception& e)
-//    {
-//        std::cerr << e.what() << "\n";
-//        return -1;
-//    }
-//    std::cout << path << "\n";
-//#ifdef _WIN32
-//    //executeAndPrint((path + "\\shader\\vulkan\\compile.bat").c_str());
-//    std::cout << "................................................\n";
-//#endif // _WIN32
+
+    //MemoryPoolTest();
 
     //////////////////////////
 

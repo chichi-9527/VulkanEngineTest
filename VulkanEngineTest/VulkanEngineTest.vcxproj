@@ -155,6 +155,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IMemPool\IMemPool.h" />
+    <ClInclude Include="IMemPool\MemoryPoolTest.h" />
     <ClInclude Include="StbImage\stb_image.h" />
     <ClInclude Include="VulkanBase\Buffer.h" />
     <ClInclude Include="VulkanBase\ShaderCompiler.h" />
@@ -163,6 +164,12 @@
     <ClInclude Include="VulkanBase\VulkanBase.h" />
     <ClInclude Include="VulkanMemoryAllocator\vk_mem_alloc.h" />
     <ClInclude Include="VulkanMemoryAllocator\VmaUsage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="IMemPool\README.md">
+      <SubType>
+      </SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

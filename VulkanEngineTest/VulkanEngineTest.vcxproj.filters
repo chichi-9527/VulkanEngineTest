@@ -71,5 +71,11 @@
     <ClInclude Include="IMemPool\IMemPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="IMemPool\MemoryPoolTest.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="IMemPool\README.md" />
   </ItemGroup>
 </Project>
