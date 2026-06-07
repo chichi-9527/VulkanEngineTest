@@ -21,13 +21,17 @@
 
 static constexpr uint32_t GENERAL_POOL_BLOCK_SIZE = 4096;
 
+#define MSVC_STR2(x) #x
+#define MSVC_STR1(x) MSVC_STR2(x)
+#define TODO_REMINDER(msg) __pragma(message(__FILE__ "(" MSVC_STR1(__LINE__) ") : warning: " msg))
+
 class IMemPool;
 
 template<typename T>
-class IUserPtr 
+class IUserPtr
 {
 public:
-	using ElementType = T;
+	using elementType = T;
 
 	IUserPtr() = default;
 	IUserPtr(std::nullptr_t)
@@ -42,14 +46,26 @@ public:
 		: _ptr(nullptr), _used_node_index(used_node_index), _pool(pool)
 	{}
 
-	T* get() const
+	template <typename U>
+	friend class IUserPtr;
+
+	template <typename U>
+	IUserPtr(const IUserPtr<U>& other)
+		: _ptr(reinterpret_cast<T*>(other._ptr)),
+		_used_node_index(other._used_node_index),
+		_pool(other._pool)
+	{}
+
+	template <typename U>
+	IUserPtr& operator=(const IUserPtr<U>& other)
 	{
-		if (_used_node_index == UINT32_MAX)
-		{
-			return _ptr;
-		}
-		return reinterpret_cast<T*>(_pool->ResolveGeneralPtr(_used_node_index));
+		_ptr = reinterpret_cast<T*>(other._ptr);
+		_used_node_index = other._used_node_index;
+		_pool = other._pool;
+		return *this;
 	}
+
+	T* get() const;
 
 	// 解引用与箭头操作符重载
 	T& operator*() const { return *get(); }
@@ -62,15 +78,188 @@ public:
 	// 比较操作符
 	bool operator==(const IUserPtr& other) const { return get() == other.get(); }
 	bool operator!=(const IUserPtr& other) const { return get() != other.get(); }
+	bool operator<(const IUserPtr& other) const { return get() < other.get(); }
+	bool operator>(const IUserPtr& other) const { return get() > other.get(); }
+	bool operator<=(const IUserPtr& other) const { return get() <= other.get(); }
+	bool operator>=(const IUserPtr& other) const { return get() >= other.get(); }
 	bool operator==(std::nullptr_t) const { return get() == nullptr; }
 	bool operator!=(std::nullptr_t) const { return get() != nullptr; }
-	
+	friend bool operator==(std::nullptr_t, const IUserPtr& p) { return p.get() == nullptr; }
+	friend bool operator!=(std::nullptr_t, const IUserPtr& p) { return p.get() != nullptr; }
+
 private:
 	T* _ptr = nullptr;
 	uint32_t _used_node_index = UINT32_MAX;
 	IMemPool* _pool = nullptr;
 
 };
+template<>
+class IUserPtr<void>
+{
+public:
+	using elementType = void;
+
+	IUserPtr() = default;
+	IUserPtr(std::nullptr_t)
+		: _ptr(nullptr), _used_node_index(UINT32_MAX), _pool(nullptr)
+	{}
+	// 固定大小池的构造函数 (直接保存原生指针)
+	explicit IUserPtr(void* raw_ptr)
+		: _ptr(raw_ptr), _used_node_index(UINT32_MAX), _pool(nullptr)
+	{}
+	// 通用池的构造函数 (保存 Node 索引与池指针)
+	IUserPtr(uint32_t used_node_index, IMemPool* pool)
+		: _ptr(nullptr), _used_node_index(used_node_index), _pool(pool)
+	{}
+
+	template <typename U>
+	friend class IUserPtr;
+
+	template <typename U>
+	IUserPtr(const IUserPtr<U>& other)
+		: _ptr(reinterpret_cast<void*>(other._ptr)),
+		_used_node_index(other._used_node_index),
+		_pool(other._pool)
+	{}
+
+	template <typename U>
+	IUserPtr& operator=(const IUserPtr<U>& other)
+	{
+		_ptr = reinterpret_cast<void*>(other._ptr);
+		_used_node_index = other._used_node_index;
+		_pool = other._pool;
+		return *this;
+	}
+
+	void* get() const;
+
+	explicit operator bool() const { return get() != nullptr; }
+
+	uint32_t GetUsedNodeIndex() const { return _used_node_index; }
+
+	// 比较操作符
+	bool operator==(const IUserPtr& other) const { return get() == other.get(); }
+	bool operator!=(const IUserPtr& other) const { return get() != other.get(); }
+	bool operator<(const IUserPtr& other) const { return get() < other.get(); }
+	bool operator>(const IUserPtr& other) const { return get() > other.get(); }
+	bool operator<=(const IUserPtr& other) const { return get() <= other.get(); }
+	bool operator>=(const IUserPtr& other) const { return get() >= other.get(); }
+	bool operator==(std::nullptr_t) const { return get() == nullptr; }
+	bool operator!=(std::nullptr_t) const { return get() != nullptr; }
+	friend bool operator==(std::nullptr_t, const IUserPtr& p) { return p.get() == nullptr; }
+	friend bool operator!=(std::nullptr_t, const IUserPtr& p) { return p.get() != nullptr; }
+
+private:
+	void* _ptr = nullptr;
+	uint32_t _used_node_index = UINT32_MAX;
+	IMemPool* _pool = nullptr;
+
+};
+template<>
+class IUserPtr<const void>
+{
+public:
+	using elementType = void;
+
+	IUserPtr() = default;
+	IUserPtr(std::nullptr_t)
+		: _ptr(nullptr), _used_node_index(UINT32_MAX), _pool(nullptr)
+	{}
+	// 固定大小池的构造函数 (直接保存原生指针)
+	explicit IUserPtr(const void* raw_ptr)
+		: _ptr(raw_ptr), _used_node_index(UINT32_MAX), _pool(nullptr)
+	{}
+	// 通用池的构造函数 (保存 Node 索引与池指针)
+	IUserPtr(uint32_t used_node_index, IMemPool* pool)
+		: _ptr(nullptr), _used_node_index(used_node_index), _pool(pool)
+	{}
+
+	template <typename U>
+	friend class IUserPtr;
+
+	template <typename U>
+	IUserPtr(const IUserPtr<U>& other)
+		: _ptr(reinterpret_cast<const void*>(other._ptr)),
+		_used_node_index(other._used_node_index),
+		_pool(other._pool)
+	{}
+
+	template <typename U>
+	IUserPtr& operator=(const IUserPtr<U>& other)
+	{
+		_ptr = reinterpret_cast<const void*>(other._ptr);
+		_used_node_index = other._used_node_index;
+		_pool = other._pool;
+		return *this;
+	}
+
+	const void* get() const;
+
+	explicit operator bool() const { return get() != nullptr; }
+
+	uint32_t GetUsedNodeIndex() const { return _used_node_index; }
+
+	// 比较操作符
+	bool operator==(const IUserPtr& other) const { return get() == other.get(); }
+	bool operator!=(const IUserPtr& other) const { return get() != other.get(); }
+	bool operator<(const IUserPtr& other) const { return get() < other.get(); }
+	bool operator>(const IUserPtr& other) const { return get() > other.get(); }
+	bool operator<=(const IUserPtr& other) const { return get() <= other.get(); }
+	bool operator>=(const IUserPtr& other) const { return get() >= other.get(); }
+	bool operator==(std::nullptr_t) const { return get() == nullptr; }
+	bool operator!=(std::nullptr_t) const { return get() != nullptr; }
+	friend bool operator==(std::nullptr_t, const IUserPtr& p) { return p.get() == nullptr; }
+	friend bool operator!=(std::nullptr_t, const IUserPtr& p) { return p.get() != nullptr; }
+
+private:
+	const void* _ptr = nullptr;
+	uint32_t _used_node_index = UINT32_MAX;
+	IMemPool* _pool = nullptr;
+
+};
+
+// 特化 std::pointer_traits
+namespace std
+{
+	template <typename T>
+	struct pointer_traits<IUserPtr<T>> {
+		using pointer = IUserPtr<T>;
+		using element_type = T;
+		using difference_type = std::ptrdiff_t;
+
+		template <typename U>
+		using rebind = IUserPtr<U>;
+
+		// 告訴標準庫如何從原生指標轉回你的自定義指標
+		static pointer pointer_to(element_type& r) noexcept
+		{
+			return pointer(std::addressof(r));
+		}
+	};
+
+	template <>
+	struct pointer_traits<IUserPtr<void>> {
+		using pointer = IUserPtr<void>;
+		using element_type = void;
+		using difference_type = std::ptrdiff_t;
+
+		template <typename U>
+		using rebind = IUserPtr<U>;
+
+	};
+
+	template <>
+	struct pointer_traits<IUserPtr<const void>> {
+		using pointer = IUserPtr<const void>;
+		using element_type = const void;
+		using difference_type = std::ptrdiff_t;
+
+		template <typename U>
+		using rebind = IUserPtr<U>;
+
+	};
+
+}
 
 
 class IMemPool
@@ -129,14 +318,14 @@ public:
 
 		MemClassCounts() = default;
 		MemClassCounts(uint32_t blockCountByte8,
-		uint32_t blockCountByte16,
-		uint32_t blockCountByte32,
-		uint32_t blockCountByte64,
-		uint32_t blockCountByte128,
-		uint32_t blockCountByte256,
-		uint32_t blockCountByte512,
-		uint32_t blockCountByte1024,
-		uint32_t blockCountGeneral)
+			uint32_t blockCountByte16,
+			uint32_t blockCountByte32,
+			uint32_t blockCountByte64,
+			uint32_t blockCountByte128,
+			uint32_t blockCountByte256,
+			uint32_t blockCountByte512,
+			uint32_t blockCountByte1024,
+			uint32_t blockCountGeneral)
 			: BlockCountByte8(blockCountByte8)
 			, BlockCountByte16(blockCountByte16)
 			, BlockCountByte32(blockCountByte32)
@@ -340,9 +529,9 @@ public:
 
 			if (_used_list_head != UINT32_MAX)
 			{
-				_used_nodes[_used_list_head].PreNode = usedNodeIndex;
+				_used_nodes[_used_list_head].PreNode = (uint32_t)usedNodeIndex;
 			}
-			_used_list_head = usedNodeIndex;
+			_used_list_head = (uint32_t)usedNodeIndex;
 
 			resPtr = (ClassName*)out.UserPtr;
 
@@ -378,7 +567,7 @@ public:
 		// 返回封装好的 UserPtr
 		if (needByte > 1024)
 		{
-			return IUserPtr<ClassName>(usedNodeIndex, this);
+			return IUserPtr<ClassName>((uint32_t)usedNodeIndex, this);
 		}
 		return IUserPtr<ClassName>(resPtr);
 
@@ -442,7 +631,7 @@ public:
 					}
 				}
 				};
-			
+
 
 			if (_used_list_head != UINT32_MAX)
 			{
@@ -560,8 +749,18 @@ public:
 			node.PreNode = UINT32_MAX;
 			node.NextNode = _used_list_head;
 
-			static_assert(std::is_trivially_copyable_v<T>, "General pool only supports Trivially Copyable types due to defragmentation/move.");
-			node.RelocCallBack = [](void* dst, void* src, uint32_t count) {
+			/*if constexpr (std::is_trivially_copyable_v<T>)
+			{
+				TriggerWarning<T> warn;
+			}*/
+
+#if defined(__GNUC__) || defined(__clang__) || (__cplusplus >= 202302L)
+#warning "the generic pool may throw an undefined error when dealing with types that are not easily copyable due to defragmentation/move."
+#elif defined(_MSC_VER)
+			TODO_REMINDER("the generic pool may throw an undefined error when dealing with types that are not easily copyable due to defragmentation/move.")
+#endif
+
+				node.RelocCallBack = [](void* dst, void* src, uint32_t count) {
 				std::memmove(dst, src, (size_t)count * sizeof(T));
 				};
 
@@ -575,9 +774,9 @@ public:
 			_block_info[out.StartIndex].UsedNodeIndex = newIndex;
 
 			return IUserPtr<T>(newIndex, this);
-			
+
 		}
-		
+
 		size_t idx = _get_bucket_index(needByte);
 		T* ptr = (T*)_take_block_fixed_size_pool(idx, _get_fixed_pool_head(idx), _get_fixed_block_size(idx), _get_fixed_block_count(idx));
 		return IUserPtr<T>(ptr);
@@ -626,7 +825,7 @@ public:
 		{
 			return nullptr;
 		}
-		
+
 		return _used_nodes[index].UserPtr;
 	}
 
@@ -758,7 +957,7 @@ private:
 
 	AllocOut _allocate_from_general_pool(uint32_t need_blocks)
 	{
-		
+
 		if (need_blocks == 0) return { nullptr, 0 };
 
 		uint32_t prev = UINT32_MAX;
@@ -853,7 +1052,7 @@ private:
 			{
 				_get_free_header(curHeader->NextNodeIndex)->PreNodeIndex = newStart;
 			}
-		
+
 		}
 		else
 		{
@@ -940,7 +1139,7 @@ private:
 	// 碎片整理
 	void _defragment_general_pool()
 	{
-		
+
 		std::vector<UsedNode*> usedList;
 		usedList.reserve(_mem_class_counts.BlockCountGeneral / 2);
 
@@ -970,7 +1169,7 @@ private:
 
 			void* oldPtr = (void*)((std::byte*)_block_general_ptr + (size_t)node->StartIndex * GENERAL_POOL_BLOCK_SIZE);
 			void* newPtr = (void*)((std::byte*)_block_general_ptr + (size_t)newStart * GENERAL_POOL_BLOCK_SIZE);
-			
+
 			if (node->RelocCallBack)
 				node->RelocCallBack(newPtr, oldPtr, node->UserCount);
 
@@ -1024,7 +1223,7 @@ private:
 
 	void _rebuild_free_list(uint32_t start_from)
 	{
-		uint32_t total = _block_info.size();
+		uint32_t total = (uint32_t)_block_info.size();
 		uint32_t prev = UINT32_MAX;
 		_free_list_head_general = UINT32_MAX;
 
@@ -1255,45 +1454,155 @@ private:
 };
 
 template<typename T>
+inline T* IUserPtr<T>::get() const
+{
+	if (_used_node_index == UINT32_MAX)
+	{
+		return _ptr;
+	}
+	return reinterpret_cast<T*>(_pool->ResolveGeneralPtr(_used_node_index));
+}
+
+inline void* IUserPtr<void>::get() const
+{
+	if (_used_node_index == UINT32_MAX)
+	{
+		return _ptr;
+	}
+	return _pool->ResolveGeneralPtr(_used_node_index);
+}
+
+inline const void* IUserPtr<const void>::get() const
+{
+	if (_used_node_index == UINT32_MAX)
+	{
+		return _ptr;
+	}
+	return _pool->ResolveGeneralPtr(_used_node_index);
+}
+
+
+
+template<typename T>
 class IMemPoolAllocator
 {
 public:
 	using value_type = T;
 	using pointer = IUserPtr<T>;
 
+	IMemPoolAllocator() noexcept : _pool(nullptr) {}
 	IMemPoolAllocator(IMemPool* pool)
 		: _pool(pool)
 	{}
 
 	template <typename U>
-	IMemPoolAllocator(const IMemPoolAllocator<U>& other) : _pool(other._pool) {}
+	struct rebind {
+		using other = IMemPoolAllocator<U>;
+	};
+
+	template <typename AnyType>
+	friend class IMemPoolAllocator;
+
+	template <typename U>
+	IMemPoolAllocator(const IMemPoolAllocator<U>& other) noexcept : _pool(other._pool) {}
 
 	/// <summary>
 	/// 
 	/// </summary>
 	/// <param name="n"> : T count </param>
 	/// <returns></returns>
-	pointer allocate(std::uint32_t n)
+	pointer allocate(std::size_t n)
 	{
-		if (n > std::numeric_limits<std::uint32_t>::max() / sizeof(T))
+		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
 		{
 			throw std::bad_alloc();
 		}
 
-		return _pool->Allocate<T>(n);
+		if (_pool && n > 0)
+			return _pool->Allocate<T>((uint32_t)n);
+		return IUserPtr<T>();
 	}
 	/// <summary>
 	/// 
 	/// </summary>
 	/// <param name="p"></param>
 	/// <param name="n"> : T count </param>
-	void deallocate(pointer p, std::uint32_t n)
+	void deallocate(pointer p, std::size_t n) noexcept
 	{
-		_pool->Deallocate<T>(p, n);
+		if (_pool)
+			_pool->Deallocate<T>(p, (uint32_t)n);
 	}
 
-	bool operator==(const IMemPoolAllocator& other) const { return _pool == other._pool; }
-	bool operator!=(const IMemPoolAllocator& other) const { return !(*this == other); }
+	template <typename U>
+	bool operator==(const IMemPoolAllocator<U>& other) const { return _pool == other._pool; }
+	template <typename U>
+	bool operator!=(const IMemPoolAllocator<U>& other) const { return !(*this == other); }
+
+
+private:
+	IMemPool* _pool;
+};
+
+
+template<typename T>
+class IMemPoolAllocatorOnlyFixedBlock
+{
+public:
+	using value_type = T;
+
+	IMemPoolAllocatorOnlyFixedBlock() noexcept : _pool(nullptr) {}
+	IMemPoolAllocatorOnlyFixedBlock(IMemPool* pool)
+		: _pool(pool)
+	{}
+
+	template <typename U>
+	struct rebind {
+		using other = IMemPoolAllocatorOnlyFixedBlock<U>;
+	};
+
+	template <typename AnyType>
+	friend class IMemPoolAllocatorOnlyFixedBlock;
+
+	template <typename U>
+	IMemPoolAllocatorOnlyFixedBlock(const IMemPoolAllocatorOnlyFixedBlock<U>& other) noexcept : _pool(other._pool) {}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="n"> : T count </param>
+	/// <returns></returns>
+	T* allocate(std::size_t n)
+	{
+		if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
+		{
+			throw std::bad_alloc();
+		}
+
+		if (n > 0 && (n * sizeof(T) > 1024))
+		{
+			throw std::bad_alloc();
+		}
+
+		if (_pool && n > 0)
+			return _pool->Allocate<T>((uint32_t)n).get();
+		return nullptr;
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="p"></param>
+	/// <param name="n"> : T count </param>
+	void deallocate(T* p, std::size_t n) noexcept
+	{
+		IUserPtr<T> ptr(p);
+		if (_pool)
+			_pool->Deallocate<T>(ptr, (uint32_t)n);
+	}
+
+	template <typename U>
+	bool operator==(const IMemPoolAllocatorOnlyFixedBlock<U>& other) const { return _pool == other._pool; }
+	template <typename U>
+	bool operator!=(const IMemPoolAllocatorOnlyFixedBlock<U>& other) const { return !(*this == other); }
 
 
 private:
