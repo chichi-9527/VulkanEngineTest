@@ -56,7 +56,7 @@ public:
 	// Render command
 	void WaitForFence(uint32_t& frameIndex);
 	int AcquireNextImage(uint32_t& frameIndex);
-	void ResetCommandBuffer();
+	void ResetCommandBuffer(uint32_t frameIndex);
 	void RecordCommandBuffer(uint32_t& frameIndex);
 	void UpdateUniformBuffer(uint32_t& frameIndex);
 	bool SubmitCommandBuffer(uint32_t& frameIndex);
@@ -182,13 +182,14 @@ private:
 	VkFormat _swap_chain_image_format;
 	VkFormat _depth_format;
 	VkExtent2D _swap_chain_extent;
+
 	// ubo
 	VkDescriptorSetLayout _descriptor_set_layout;
 	VkPipelineLayout _pipeline_layout;
 	VkRenderPass _render_pass;
 	VkPipeline _graphics_pipeline;
 	VkCommandPool _command_pool;
-	VkCommandBuffer _command_buffer;
+	std::vector<VkCommandBuffer> _command_buffers;
 	VkBuffer _vertex_buffer;
 	VkDeviceMemory _vertex_buffer_memory;
 	VkBuffer _index_buffer;

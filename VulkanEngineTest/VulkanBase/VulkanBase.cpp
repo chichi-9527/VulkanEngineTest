@@ -230,9 +230,9 @@ int VulkanBase::AcquireNextImage(uint32_t& frameIndex)
 	return 0;
 }
 
-void VulkanBase::ResetCommandBuffer()
+void VulkanBase::ResetCommandBuffer(uint32_t frameIndex)
 {
-	vkResetCommandBuffer(_command_buffer, 0);
+	vkResetCommandBuffer(_command_buffers[frameIndex], 0);
 }
 
 void VulkanBase::RecordCommandBuffer(uint32_t& frameIndex)
@@ -265,7 +265,7 @@ bool VulkanBase::SubmitCommandBuffer(uint32_t& frameIndex)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &_command_buffer;
+	submitInfo.pCommandBuffers = &_command_buffers[frameIndex];
 
 	VkSemaphore signalSemaphores[] = { _submit_semaphores[ImageIndex]};
 	submitInfo.signalSemaphoreCount = 1;
@@ -1349,7 +1349,7 @@ bool VulkanBase::_create_descriptor_set_layout()
 		std::cout << std::format("ERROR : [ VulkanBase ] Failed to create descriptor set layout! Error code: {}\n", int32_t(result));
 		return false;
 	}
-
+	
 	return true;
 }
 
@@ -1758,10 +1758,14 @@ bool VulkanBase::_create_command_buffer()
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = 1;
 
-	if (VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &_command_buffer))
+	_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		std::cout << std::format("ERROR : [ VulkanBase ] Failed to allocate command buffer! Error code: {}\n", int32_t(result));
-		return false;
+		if (VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, &_command_buffers[i]))
+		{
+			std::cout << std::format("ERROR : [ VulkanBase ] Failed to allocate command buffer! Error code: {}\n", int32_t(result));
+			return false;
+		}
 	}
 
 	return true;
@@ -1774,7 +1778,7 @@ bool VulkanBase::_record_command_buffer(uint32_t imageIndex, uint32_t frame_inde
 	beginInfo.flags = 0;
 	beginInfo.pInheritanceInfo = nullptr;
 
-	if (VkResult result = vkBeginCommandBuffer(_command_buffer, &beginInfo))
+	if (VkResult result = vkBeginCommandBuffer(_command_buffers[frame_index], &beginInfo))
 	{
 		std::cout << std::format("ERROR : [ VulkanBase ] Failed to begin recording command buffer! Error code: {}\n", int32_t(result));
 		return false;
@@ -1793,8 +1797,8 @@ bool VulkanBase::_record_command_buffer(uint32_t imageIndex, uint32_t frame_inde
 	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 	renderPassInfo.pClearValues = clearValues.data();
 
-	vkCmdBeginRenderPass(_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdBindPipeline(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphics_pipeline);
+	vkCmdBeginRenderPass(_command_buffers[frame_index], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBindPipeline(_command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, _graphics_pipeline);
 
 	VkViewport viewport{};
 	viewport.x = 0.0f;
@@ -1803,27 +1807,27 @@ bool VulkanBase::_record_command_buffer(uint32_t imageIndex, uint32_t frame_inde
 	viewport.height = static_cast<float>(_swap_chain_extent.height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
-	vkCmdSetViewport(_command_buffer, 0, 1, &viewport);
+	vkCmdSetViewport(_command_buffers[frame_index], 0, 1, &viewport);
 
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
 	scissor.extent = _swap_chain_extent;
-	vkCmdSetScissor(_command_buffer, 0, 1, &scissor);
+	vkCmdSetScissor(_command_buffers[frame_index], 0, 1, &scissor);
 
 	// 
 	VkBuffer vertexBuffers[] = { _vertex_buffer };
 	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers(_command_buffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindVertexBuffers(_command_buffers[frame_index], 0, 1, vertexBuffers, offsets);
 
-	vkCmdBindIndexBuffer(_command_buffer, _index_buffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(_command_buffers[frame_index], _index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
-	vkCmdBindDescriptorSets(_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline_layout, 0, 1, &_descriptor_sets[frame_index], 0, nullptr);
+	vkCmdBindDescriptorSets(_command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline_layout, 0, 1, &_descriptor_sets[frame_index], 0, nullptr);
 
 	//vkCmdDraw(_command_buffer, 3, 1, 0, 0);
-	vkCmdDrawIndexed(_command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-	vkCmdEndRenderPass(_command_buffer);
+	vkCmdDrawIndexed(_command_buffers[frame_index], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+	vkCmdEndRenderPass(_command_buffers[frame_index]);
 
-	if (VkResult result = vkEndCommandBuffer(_command_buffer))
+	if (VkResult result = vkEndCommandBuffer(_command_buffers[frame_index]))
 	{
 		std::cout << std::format("ERROR : [ VulkanBase ] Failed to record command buffer! Error code: {}\n", int32_t(result));
 		return false;

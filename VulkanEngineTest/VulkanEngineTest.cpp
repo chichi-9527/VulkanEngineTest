@@ -196,7 +196,7 @@ int main()
                 break;
             }
         }
-		VulkanBase::Base().ResetCommandBuffer();
+		VulkanBase::Base().ResetCommandBuffer(frameIndex);
 		VulkanBase::Base().RecordCommandBuffer(frameIndex);
         if (!VulkanBase::Base().SubmitCommandBuffer(frameIndex))
         {
@@ -205,6 +205,11 @@ int main()
         }
 		VulkanBase::Base().Present(frameIndex);
 		//VulkanBase::Base().DrawFrame();
+
+        if (++frameIndex == 2)
+        {
+            frameIndex = 0;
+        }
 
         glfwPollEvents();
         TitleFps();
